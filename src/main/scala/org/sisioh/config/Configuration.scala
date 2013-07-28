@@ -5,11 +5,7 @@ import java.io._
 import com.typesafe.config._
 
 import scala.collection.JavaConverters._
-import scala.util.control.NonFatal
-
-object Mode extends Enumeration {
-  val Dev, Prod = Value
-}
+import scala.util.{Failure, Try}
 
 
 /**
@@ -33,23 +29,23 @@ object Configuration {
    * loads `Configuration` from config.resource or config.file. If not found default to 'conf/application.conf' in Dev mode
    * @return  configuration to be used
    */
-  private[config] def loadDev(appPath: File, devSettings: Map[String, String]): Config = {
+  private[config] def loadDev(appkey: File, devSettings: Map[String, String]): Config = {
     try {
       lazy val file = {
         devSettings.get("config.file").orElse(Option(System.getProperty("config.file")))
-          .map(f => new File(f)).getOrElse(new File(appPath, "conf/application.conf"))
+          .map(f => new File(f)).getOrElse(new File(appkey, "conf/application.conf"))
       }
       val config = Option(System.getProperty("config.resource"))
         .map(ConfigFactory.parseResources(_)).getOrElse(ConfigFactory.parseFileAnySyntax(file))
 
       ConfigFactory.parseMap(devSettings.asJava).withFallback(ConfigFactory.load(config))
     } catch {
-      case e: ConfigException => throw configError(e.origin, e.getMessage, Some(e))
+      case e: ConfigException => throw configError(ConfigurationOrigin(e.origin), e.getMessage, Some(e))
     }
   }
 
   /**
-   * Loads a new `Configuration` either from the classpath or from
+   * Loads a new `Configuration` either from the classkey or from
    * `conf/application.conf` depending on the application's Mode.
    *
    * The provided mode is used if the application is not ready
@@ -60,16 +56,16 @@ object Configuration {
    * @param mode Application mode.
    * @return a `Configuration` instance
    */
-  def load(appPath: File, currentMode: Mode.Value, mode: Mode.Value = Mode.Dev, devSettings: Map[String, String] = Map.empty) = {
-    try {
-      if (currentMode == Mode.Prod)
+  def load(appKey: File, mode: ConfigurationMode.Value = ConfigurationMode.Dev, devSettings: Map[String, String] = Map.empty) = {
+    Try {
+      if (mode == ConfigurationMode.Prod)
         Configuration(dontAllowMissingConfig)
       else
-        Configuration(loadDev(appPath, devSettings))
-    } catch {
-      case e: ConfigException => throw configError(e.origin, e.getMessage, Some(e))
-      case e: Throwable => throw e
-    }
+        Configuration(loadDev(appKey, devSettings))
+    }.recoverWith {
+      case e: ConfigException =>
+        Failure(configError(ConfigurationOrigin(e.origin), e.getMessage, Some(e)))
+    }.get
   }
 
   /**
@@ -84,16 +80,8 @@ object Configuration {
     Configuration(ConfigFactory.parseMap(data.asJava))
   }
 
-  private def configError(origin: ConfigOrigin, message: String, e: Option[Throwable] = None): Exception = {
-    new Exception()
-    //    import scalax.io.JavaConverters._
-    //    new Exception("Configuration error", message, e.orNull) {
-    //      def line = Option(origin.lineNumber: java.lang.Integer).orNull
-    //      def position = null
-    //      def input = Option(origin.url).map(_.asInput.string).orNull
-    //      def sourceName = Option(origin.filename).orNull
-    //      override def toString = "Configuration error: " + getMessage
-    //    }
+  private def configError(origin: ConfigurationOrigin, message: String, e: Option[Throwable] = None): Exception = {
+    new ConfigurationException("configuration error", e.orNull, origin)
   }
 
 }
@@ -118,13 +106,15 @@ case class Configuration(underlying: Config) {
    * Read a value from the underlying implementation,
    * catching Errors and wrapping it in an Option value.
    */
-  private def readValue[T](path: String, v: => T): Option[T] = {
-    try {
+  private def readValue[T](key: String, v: => T): Option[T] = {
+    Try {
       Option(v)
-    } catch {
+    }.recover {
       case e: ConfigException.Missing => None
-      case NonFatal(e) => throw reportError(path, e.getMessage, Some(e))
-    }
+    }.recoverWith {
+      case e: Throwable =>
+        Failure(reportError(key, e.getMessage, Some(e)))
+    }.get
   }
 
   /**
@@ -141,15 +131,16 @@ case class Configuration(underlying: Config) {
    * @param validValues valid values for this configuration
    * @return a configuration value
    */
-  def getString(path: String, validValues: Option[Set[String]] = None): Option[String] = readValue(path, underlying.getString(path)).map {
-    value =>
-      validValues match {
-        case Some(values) if values.contains(value) => value
-        case Some(values) if values.isEmpty => value
-        case Some(values) => throw reportError(path, "Incorrect value, one of " + (values.reduceLeft(_ + ", " + _)) + " was expected.")
-        case None => value
-      }
-  }
+  def getStringValue(key: String, validValues: Option[Set[String]] = None): Option[String] =
+    readValue(key, underlying.getString(key)).map {
+      value =>
+        validValues match {
+          case Some(values) if values.contains(value) => value
+          case Some(values) if values.isEmpty => value
+          case Some(values) => throw reportError(key, "Incorrect value, one of " + (values.reduceLeft(_ + ", " + _)) + " was expected.")
+          case None => value
+        }
+    }
 
   /**
    * Retrieves a configuration value as an `Int`.
@@ -165,7 +156,7 @@ case class Configuration(underlying: Config) {
    * @param key the configuration key, relative to the configuration root key
    * @return a configuration value
    */
-  def getInt(path: String): Option[Int] = readValue(path, underlying.getInt(path))
+  def getIntValue(key: String): Option[Int] = readValue(key, underlying.getInt(key))
 
   /**
    * Retrieves a configuration value as a `Boolean`.
@@ -177,12 +168,12 @@ case class Configuration(underlying: Config) {
    * }}}
    *
    * A configuration error will be thrown if the configuration value is not a valid `Boolean`.
-   * Authorized vales are `yes/no or true/false.
+   * Authorized vales are yes/no or true/false.
    *
    * @param key the configuration key, relative to the configuration root key
    * @return a configuration value
    */
-  def getBoolean(path: String): Option[Boolean] = readValue(path, underlying.getBoolean(path))
+  def getBooleanValue(key: String): Option[Boolean] = readValue(key, underlying.getBoolean(key))
 
   /**
    * Retrieves a configuration value as `Milliseconds`.
@@ -199,7 +190,7 @@ case class Configuration(underlying: Config) {
    * engine.timeout = 1 second
    * }}}
    */
-  def getMilliseconds(path: String): Option[Long] = readValue(path, underlying.getMilliseconds(path))
+  def getMillisecondValue(key: String): Option[Long] = readValue(key, underlying.getMilliseconds(key))
 
   /**
    * Retrieves a configuration value as `Nanoseconds`.
@@ -216,7 +207,7 @@ case class Configuration(underlying: Config) {
    * engine.timeout = 1 second
    * }}}
    */
-  def getNanoseconds(path: String): Option[Long] = readValue(path, underlying.getNanoseconds(path))
+  def getNanosecondValue(key: String): Option[Long] = readValue(key, underlying.getNanoseconds(key))
 
   /**
    * Retrieves a configuration value as `Bytes`.
@@ -233,7 +224,7 @@ case class Configuration(underlying: Config) {
    * engine.maxSize = 512k
    * }}}
    */
-  def getBytes(path: String): Option[Long] = readValue(path, underlying.getBytes(path))
+  def getByteValue(key: String): Option[Long] = readValue(key, underlying.getBytes(key))
 
   /**
    * Retrieves a sub-configuration, i.e. a configuration instance containing all keys starting with a given prefix.
@@ -249,7 +240,7 @@ case class Configuration(underlying: Config) {
    * @param key the root prefix for this sub-configuration
    * @return a new configuration
    */
-  def getConfig(path: String): Option[Configuration] = readValue(path, underlying.getConfig(path)).map(Configuration(_))
+  def getConfiguration(key: String): Option[Configuration] = readValue(key, underlying.getConfig(key)).map(Configuration(_))
 
   /**
    * Retrieves a configuration value as a `Double`.
@@ -265,7 +256,7 @@ case class Configuration(underlying: Config) {
    * @param key the configuration key, relative to the configuration root key
    * @return a configuration value
    */
-  def getDouble(path: String): Option[Double] = readValue(path, underlying.getDouble(path))
+  def getDoubleValue(key: String): Option[Double] = readValue(key, underlying.getDouble(key))
 
   /**
    * Retrieves a configuration value as a `Long`.
@@ -281,7 +272,7 @@ case class Configuration(underlying: Config) {
    * @param key the configuration key, relative to the configuration root key
    * @return a configuration value
    */
-  def getLong(path: String): Option[Long] = readValue(path, underlying.getLong(path))
+  def getLongValue(key: String): Option[Long] = readValue(key, underlying.getLong(key))
 
   /**
    * Retrieves a configuration value as a `Number`.
@@ -294,10 +285,10 @@ case class Configuration(underlying: Config) {
    *
    * A configuration error will be thrown if the configuration value is not a valid `Number`.
    *
-   * @param path the configuration key, relative to the configuration root key
+   * @param key the configuration key, relative to the configuration root key
    * @return a configuration value
    */
-  def getNumber(path: String): Option[Number] = readValue(path, underlying.getNumber(path))
+  def getNumberValue(key: String): Option[Number] = readValue(key, underlying.getNumber(key))
 
   /**
    * Retrieves a configuration value as a List of `Boolean`.
@@ -317,7 +308,7 @@ case class Configuration(underlying: Config) {
    * A configuration error will be thrown if the configuration value is not a valid `Boolean`.
    * Authorized vales are yes/no or true/false.
    */
-  def getBooleanList(path: String): Option[Seq[Boolean]] = readValue[Seq[Boolean]](path, underlying.getBooleanList(path).asScala.toSeq.map(e => if (e) true else false))
+  def getBooleanValues(key: String): Option[Seq[Boolean]] = readValue[Seq[Boolean]](key, underlying.getBooleanList(key).asScala.toSeq.map(e => if (e) true else false))
 
   /**
    * Retrieves a configuration value as a List of `Bytes`.
@@ -334,10 +325,11 @@ case class Configuration(underlying: Config) {
    * engine.maxSizes = [512k, 256k, 256k]
    * }}}
    */
-  def getBytesList(path: String): Option[Seq[Long]] = readValue(path, underlying.getBytesList(path).asScala.toSeq.map(e => e.toLong))
+  def getByteValues(key: String): Option[Seq[Long]] =
+    readValue(key, underlying.getBytesList(key).asScala.toSeq.map(e => e.toLong))
 
   /**
-   * Retrieves a List of sub-configurations, i.e. a configuration instance for each key that matches the path.
+   * Retrieves a List of sub-configurations, i.e. a configuration instance for each key that matches the key.
    *
    * For example:
    * {{{
@@ -347,9 +339,10 @@ case class Configuration(underlying: Config) {
    *
    * The root key of this new configuration will be "engine", and you can access any sub-keys relatively.
    */
-  def getConfigList(path: String): Option[Seq[Configuration]] = readValue(path, underlying.getConfigList(path)).map {
-    configs => configs.asScala.map(Configuration(_))
-  }
+  def getConfigurations(key: String): Option[Seq[Configuration]] =
+    readValue(key, underlying.getConfigList(key)).map {
+      configs => configs.asScala.map(Configuration(_))
+    }
 
   /**
    * Retrieves a configuration value as a List of `Double`.
@@ -366,7 +359,8 @@ case class Configuration(underlying: Config) {
    * engine.maxSizes = [5.0, 3.34, 2.6]
    * }}}
    */
-  def getDoubleList(path: String): Option[Seq[java.lang.Double]] = readValue(path, underlying.getDoubleList(path).asScala.toSeq)
+  def getDoubleValues(key: String): Option[Seq[Double]] =
+    readValue(key, underlying.getDoubleList(key).asScala.toSeq.map(_.toDouble))
 
   /**
    * Retrieves a configuration value as a List of `Integer`.
@@ -383,7 +377,8 @@ case class Configuration(underlying: Config) {
    * engine.maxSizes = [100, 500, 2]
    * }}}
    */
-  def getIntList(path: String): Option[Seq[java.lang.Integer]] = readValue(path, underlying.getIntList(path).asScala.toSeq)
+  def getIntValues(key: String): Option[Seq[Int]] =
+    readValue(key, underlying.getIntList(key).asScala.map(e => e.toInt).toSeq)
 
   /**
    * Gets a list value (with any element type) as a ConfigList, which implements java.util.List<ConfigValue>.
@@ -400,7 +395,8 @@ case class Configuration(underlying: Config) {
    * engine.maxSizes = ["foo", "bar"]
    * }}}
    */
-  def getList(path: String): Option[ConfigList] = readValue(path, underlying.getList(path))
+  def getConfigurationValues(key: String): Option[Seq[ConfigurationValue]] =
+    readValue(key, underlying.getList(key).asScala.map(ConfigurationValue).toSeq)
 
   /**
    * Retrieves a configuration value as a List of `Long`.
@@ -417,7 +413,8 @@ case class Configuration(underlying: Config) {
    * engine.maxSizes = [10000000000000, 500, 2000]
    * }}}
    */
-  def getLongList(path: String): Option[Seq[Long]] = readValue(path, underlying.getLongList(path).asScala.toSeq.map(e => e.toLong))
+  def getLongValues(key: String): Option[Seq[Long]] =
+    readValue(key, underlying.getLongList(key).asScala.toSeq.map(e => e.toLong))
 
   /**
    * Retrieves a configuration value as List of `Milliseconds`.
@@ -434,7 +431,8 @@ case class Configuration(underlying: Config) {
    * engine.timeouts = [1 second, 1 second]
    * }}}
    */
-  def getMillisecondsList(path: String): Option[Seq[Long]] = readValue(path, underlying.getMillisecondsList(path).asScala.toSeq.map(e => e.toLong))
+  def getMillisecondValues(key: String): Option[Seq[Long]] =
+    readValue(key, underlying.getMillisecondsList(key).asScala.toSeq.map(e => e.toLong))
 
   /**
    * Retrieves a configuration value as List of `Nanoseconds`.
@@ -451,7 +449,8 @@ case class Configuration(underlying: Config) {
    * engine.timeouts = [1 second, 1 second]
    * }}}
    */
-  def getNanosecondsList(path: String): Option[Seq[Long]] = readValue(path, underlying.getNanosecondsList(path).asScala.toSeq.map(e => e.toLong))
+  def getNanosecondValues(key: String): Option[Seq[Long]] =
+    readValue(key, underlying.getNanosecondsList(key).asScala.toSeq.map(e => e.toLong))
 
   /**
    * Retrieves a configuration value as a List of `Number`.
@@ -468,7 +467,8 @@ case class Configuration(underlying: Config) {
    * engine.maxSizes = [50, 500, 5000]
    * }}}
    */
-  def getNumberList(path: String): Option[Seq[Number]] = readValue(path, underlying.getNumberList(path).asScala.toSeq)
+  def getNumberValues(key: String): Option[Seq[Number]] =
+    readValue(key, underlying.getNumberList(key).asScala.toSeq)
 
   /**
    * Retrieves a configuration value as a List of `ConfigObject`.
@@ -485,7 +485,8 @@ case class Configuration(underlying: Config) {
    * engine.properties = [{id: 5, power: 3}, {id: 6, power: 20}]
    * }}}
    */
-  def getObjectList(path: String): Option[Seq[_ <: ConfigObject]] = readValue[Seq[_ <: ConfigObject]](path, underlying.getObjectList(path).asScala.toSeq)
+  def getConfigurationObjects(key: String): Option[Seq[ConfigurationObject]] =
+    readValue[Seq[ConfigurationObject]](key, underlying.getObjectList(key).asScala.map(ConfigurationObject).toSeq)
 
   /**
    * Retrieves a configuration value as a List of `String`.
@@ -502,10 +503,10 @@ case class Configuration(underlying: Config) {
    * names = ["Jim", "Bob", "Steve"]
    * }}}
    */
-  def getStringList(path: String): Option[Seq[String]] = readValue(path, underlying.getStringList(path).asScala.toSeq)
+  def getStringValues(key: String): Option[Seq[String]] = readValue(key, underlying.getStringList(key).asScala.toSeq)
 
   /**
-   * Retrieves a ConfigObject for this path, which implements Map<String,ConfigValue>
+   * Retrieves a ConfigObject for this key, which implements Map<String,ConfigValue>
    *
    * For example:
    * {{{
@@ -519,7 +520,7 @@ case class Configuration(underlying: Config) {
    * engine.properties = {id: 1, power: 5}
    * }}}
    */
-  def getObject(path: String): Option[ConfigObject] = readValue(path, underlying.getObject(path))
+  def getConfigurationObject(key: String): Option[ConfigurationObject] = readValue(key, ConfigurationObject(underlying.getObject(key)))
 
   /**
    * Returns available keys.
@@ -547,7 +548,7 @@ case class Configuration(underlying: Config) {
   def subKeys: Set[String] = underlying.root().keySet().asScala.toSet
 
   /**
-   * Returns every path as a set of key to value pairs, by recursively iterating through the
+   * Returns every key as a set of key to value pairs, by recursively iterating through the
    * config objects.
    */
   def entrySet: Set[(String, ConfigValue)] = underlying.entrySet().asScala.map(e => e.getKey -> e.getValue).toSet
@@ -566,9 +567,9 @@ case class Configuration(underlying: Config) {
    * @param e the related exception
    * @return a configuration exception
    */
-  def reportError(path: String, message: String, e: Option[Throwable] = None): Exception = {
-    new Exception()
-    //    Configuration.configError(if (underlying.hasPath(path)) underlying.getValue(path).origin else underlying.root.origin, message, e)
+  def reportError(key: String, message: String, e: Option[Throwable] = None): Exception = {
+    val origin = if (underlying.hasPath(key)) underlying.getValue(key).origin else underlying.root.origin
+    Configuration.configError(ConfigurationOrigin(origin), message, e)
   }
 
   /**
@@ -585,7 +586,7 @@ case class Configuration(underlying: Config) {
    * @return a configuration exception
    */
   def globalError(message: String, e: Option[Throwable] = None): Exception = {
-    Configuration.configError(underlying.root.origin, message, e)
+    Configuration.configError(ConfigurationOrigin(underlying.root.origin), message, e)
   }
 
 }
