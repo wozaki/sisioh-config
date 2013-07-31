@@ -2,6 +2,36 @@
 
 sisioh-config is scala wrapper for typesafe [config](https://github.com/typesafehub/config).
 
+## setup
+
+Build Configuration
+
+for build.sbt
+```scala
+libraryDependencies ++= Seq(
+  // ...
+  "org.sisioh" %% "sisioh-config" % "0.0.1",
+  // ...
+)
+```
+
+for Build.scala
+```scala
+object AppBuild extends Build {
+  val root = Project(
+    id = "app",
+    base = file("."),
+    settings = Project.defaultSettings ++ Seq(
+      libraryDependencies ++= Seq(
+        // ...
+        "org.sisioh" %% "sisioh-config" % "0.0.1",
+        // ...
+      )
+    )
+  )
+}
+```
+
 ## usage
 
 ### read raw value
