@@ -133,4 +133,12 @@ val Some(url) = dbConfigObject.get("url") // jdbc:mysql://localhost/test
   <td>ConfigurationObject</td>
   <td>ConfigObject</td>
 </tr>
+<tr>
+  <td>ConfigurationOrigin</td>
+  <td>ConfigOrigin</td>
+</tr>
+<tr>
+  <td>ConfigurationValueType</td>
+  <td>ConfigValueType</td>
+</tr>
 </table>
