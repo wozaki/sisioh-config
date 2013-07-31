@@ -1,23 +1,112 @@
 package org.sisioh.config
 
-import com.typesafe.config.{ConfigMergeable, ConfigRenderOptions, ConfigValue}
+import com.typesafe.config.{ConfigValueType, ConfigValue}
+import scala.collection.JavaConverters._
 
-case class ConfigurationValue(configValue: ConfigValue) {
+object ConfigurationValue {
 
-  def origin = ConfigurationOrigin(configValue.origin())
+  def apply(core: ConfigValue): ConfigurationValue =
+    new ConfigurationValueImpl(core)
 
-  def valueType = configValue.valueType()
+}
 
-  def unwrapped = configValue.unwrapped()
 
-  def render = configValue.render()
+trait ConfigurationValue
+  extends ConfigurationMergeable {
 
-  def render(options: ConfigRenderOptions) = configValue.render(options)
+  protected[config] val core: ConfigValue
 
-  def withFallback(other: ConfigMergeable) = ConfigurationValue(configValue.withFallback(other))
+  def origin: ConfigurationOrigin
 
-  def atPath(path: String) = Configuration(configValue.atPath(path))
+  def valueType: ConfigurationValueType.Value
 
-  def atKey(key: String) = Configuration(configValue.atKey(key))
+  def value: Option[Any]
+
+  def valueAsString: Option[String]
+
+  def valueAsBoolean: Option[Boolean]
+
+  def valueAsNumber: Option[Number]
+
+  def valueAsSeq: Option[Seq[Any]]
+
+  def valueAsMap: Option[Map[String, Any]]
+
+  def atPath(path: String): Configuration
+
+  def atKey(key: String): Configuration
+
+  def withFallback(other: ConfigurationMergeable): ConfigurationValue
+
+}
+
+private[config]
+case class ConfigurationValueImpl(core: ConfigValue)
+  extends ConfigurationValue {
+
+  def origin = ConfigurationOrigin(core.origin())
+
+  def valueType = ConfigurationValueType(core.valueType())
+
+  def value: Option[Any] = {
+    core.unwrapped() match {
+      case null => None
+      case v: java.util.Map[_, _] => Some(v.asScala)
+      case v: java.util.List[_] => Some(v.asScala.toSeq)
+      case v => Some(v)
+    }
+  }
+
+  def valueAsString: Option[String] = {
+    valueType match {
+      case ConfigurationValueType.String =>
+        value.map(_.asInstanceOf[String])
+      case _ =>
+        None
+    }
+  }
+
+  def valueAsBoolean: Option[Boolean] = {
+    valueType match {
+      case ConfigurationValueType.Boolean =>
+        value.map(_.asInstanceOf[Boolean])
+      case _ =>
+        None
+    }
+  }
+
+  def valueAsNumber: Option[Number] = {
+    valueType match {
+      case ConfigurationValueType.Number =>
+        value.map(_.asInstanceOf[Number])
+      case _ =>
+        None
+    }
+  }
+
+  def valueAsSeq: Option[Seq[Any]] = {
+    valueType match {
+      case ConfigurationValueType.List =>
+        value.map(_.asInstanceOf[Seq[_]])
+      case _ =>
+        None
+    }
+  }
+
+  def valueAsMap: Option[Map[String, Any]] = {
+    valueType match {
+      case ConfigurationValueType.Object =>
+        value.map(_.asInstanceOf[Map[String, _]])
+      case _ =>
+        None
+    }
+  }
+
+  def withFallback(other: ConfigurationMergeable) =
+    ConfigurationValue(core.withFallback(other.core))
+
+  def atPath(path: String) = Configuration(core.atPath(path))
+
+  def atKey(key: String) = Configuration(core.atKey(key))
 
 }

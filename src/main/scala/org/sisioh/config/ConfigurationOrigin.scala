@@ -6,13 +6,13 @@ import java.net.URL
 
 case class ConfigurationOrigin(configOrigin: ConfigOrigin) {
 
-  def description() = configOrigin.description()
+  def description() = Option(configOrigin.description())
 
-  def filename() = configOrigin.filename()
+  def filename() = Option(configOrigin.filename())
 
-  def url(): URL = configOrigin.url()
+  def url(): Option[URL] = Option(configOrigin.url())
 
-  def resource(): String = configOrigin.resource()
+  def resource(): Option[String] = Option(configOrigin.resource())
 
   def lineNumber: Int = configOrigin.lineNumber()
 

@@ -2,6 +2,7 @@ package org.sisioh.config
 
 import org.specs2.mutable.Specification
 import java.io.File
+import com.typesafe.config.ConfigObject
 
 class ConfigurationSpec extends Specification {
 
@@ -21,6 +22,17 @@ class ConfigurationSpec extends Specification {
     "make all sub keys accessible" in {
       configInMap.subKeys must contain("foo", "blah").only
     }
+
+    "get value as boolean" in {
+      val config = Configuration.from(Map("boolean.v1" -> false))
+      config.getBooleanValue("boolean.v1") must beSome(false)
+    }
+
+    "get values as boolean" in {
+      val config = Configuration.from(Map("boolean.v2" -> Seq(false, true)))
+      config.getBooleanValues("boolean.v2") must beSome(Seq(false, true))
+    }
+
   }
 
   "configuration in File" should {
@@ -38,6 +50,25 @@ class ConfigurationSpec extends Specification {
 
     "make all sub keys accessible" in {
       configInFile.subKeys must contain("foo", "blah").only
+    }
+
+    "get value as boolean" in {
+      configInFile.getBooleanValue("boolean.v1") must beSome(false)
+    }
+
+    "get values as boolean" in {
+      configInFile.getBooleanValues("boolean.v2") must beSome(Seq(false, true))
+    }
+
+    "get value as config object" in {
+      val configObjectOpt = configInFile.getConfigurationObject("object.v1")
+      configObjectOpt must beSome
+      val Some(configObject) = configObjectOpt
+      configObject("id").valueAsString must beSome("a")
+      configObject("name").valueAsString must beSome("b")
+      val objectv2 = configInFile.getConfigurationObject("object.v2")
+
+      configObject.withFallback(objectv2.get)("age").valueAsNumber must beSome(20)
     }
 
   }
