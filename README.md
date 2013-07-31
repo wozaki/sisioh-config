@@ -5,7 +5,7 @@ sisioh-config is scala wrapper for typesafe config.
 
 ## usage
 
-### reading value by get value method
+### read raw value
 
 conf/application.conf
 
@@ -22,7 +22,24 @@ val Some(bar2) = config.getStringValue("foo.bar2") // value2
 val Some(bar3) = config.getIntValue("foo.bar3") // 1
 ```
 
-### reading value by Configuration
+### read ConfigurationValue
+
+conf/application.conf
+
+``` 
+foo.bar1 = value1
+foo.bar2 = value2
+foo.bar3 = 1
+```
+
+```scala
+val config = Configuration.load(new File("conf"))
+val Some(bar1ConfigValue) = config.getConfigurationValue("foo.bar1")
+val Some(bar1) = bar1ConfigValue.valueAsString // value1
+// ...
+```
+
+### read Configuration
 
 conf/application.conf
 
@@ -40,7 +57,7 @@ val Some(bar2) = foo.getStringValue("bar2") // value2
 val Some(bar3) = foo.getIntValue("bar3") // 1
 ```
 
-### reading value by ConfigurationObject
+### read ConfigurationObject
 
 conf/application.conf
 
