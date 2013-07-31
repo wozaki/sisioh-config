@@ -114,3 +114,15 @@ val Some(driverClassName) = dbConfigObject.get("driverClassName") // com.mysql.j
 val Some(url) = dbConfigObject.get("url") // jdbc:mysql://localhost/test
 ```
 
+## ralation classes in typesafe config
+
+<table>
+<tr>
+  <td>class name</td>
+  <td>class name in typesafe config</td>
+</tr>
+<tr>
+  <td>Configuration</td>
+  <td>Config</td>
+</tr>
+</table>
