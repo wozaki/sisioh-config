@@ -1,9 +1,7 @@
 package org.sisioh.config
 
-import java.io._
-
 import com.typesafe.config._
-
+import java.io._
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Try}
 
@@ -89,7 +87,7 @@ object Configuration {
     new ConfigurationException("configuration error", e.orNull, origin)
   }
 
-  def apply(config: Config):Configuration =
+  def apply(config: Config): Configuration =
     new ConfigurationImpl(config)
 
 
@@ -100,6 +98,16 @@ trait Configuration extends ConfigurationMergeable {
   val core: Config
 
   def root: ConfigurationObject
+
+  def hasPath(path: String): Boolean
+
+  def isEmpty: Boolean
+
+  def resolve: Configuration
+
+  def resolve(option: ConfigurationResolveOptions): Configuration
+
+  def checkValid(reference: Configuration, restrictToPaths: String*): Try[Unit]
 
   def ++(other: Configuration): Configuration
 
@@ -157,10 +165,19 @@ trait Configuration extends ConfigurationMergeable {
 
   def entrySet: Set[(String, ConfigValue)]
 
+  def withOnlyPath(path: String): Configuration
+
+  def withoutPath(path: String): Configuration
+
+  def withValue(path: String, value: ConfigurationValue): Configuration
+
 }
 
 private[config]
 case class ConfigurationImpl(core: Config) extends Configuration {
+
+  def resolve(option: ConfigurationResolveOptions): Configuration =
+    Configuration(core.resolve(option.core))
 
   def ++(other: Configuration): Configuration = {
     Configuration(other.core.withFallback(core))
@@ -656,4 +673,21 @@ case class ConfigurationImpl(core: Config) extends Configuration {
     Configuration(core.withFallback(other.core))
 
   def root: ConfigurationObject = ConfigurationObject(core.root())
+
+  def hasPath(path: String): Boolean = core.hasPath(path)
+
+  def isEmpty: Boolean = core.isEmpty
+
+  def withOnlyPath(path: String): Configuration = Configuration(core.withOnlyPath(path))
+
+  def withoutPath(path: String): Configuration = Configuration(core.withoutPath(path))
+
+  def withValue(path: String, value: ConfigurationValue): Configuration =
+    Configuration(core.withValue(path, value.core))
+
+  def resolve: Configuration = Configuration(core.resolve)
+
+  def checkValid(reference: Configuration, restrictToPaths: String*): Try[Unit] = Try {
+    core.checkValid(reference.core, restrictToPaths: _*)
+  }
 }

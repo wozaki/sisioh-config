@@ -53,6 +53,8 @@ class ConfigurationSpec extends Specification {
     }
 
     "get value as boolean" in {
+      val Some(configValue) = configInFile.getConfigurationValue("boolean.v1")
+      configValue.valueAsBoolean must beSome(false)
       configInFile.getBooleanValue("boolean.v1") must beSome(false)
     }
 
