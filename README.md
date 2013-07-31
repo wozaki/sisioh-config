@@ -7,7 +7,9 @@ sisioh-config is scala wrapper for typesafe config.
 
 ### reading value by get value method
 
-``` conf/application.conf
+conf/application.conf
+
+``` 
 foo.bar1 = value1
 foo.bar2 = value2
 foo.bar3 = 1
@@ -22,7 +24,9 @@ val Some(bar3) = config.getIntValue("foo.bar3") // 1
 
 ### reading value by Configuration
 
-``` conf/application.conf
+conf/application.conf
+
+```
 foo.bar1 = value1
 foo.bar2 = value2
 foo.bar3 = 1
@@ -38,7 +42,9 @@ val Some(bar3) = foo.getIntValue("bar3") // 1
 
 ### reading value by ConfigurationObject
 
-``` conf/application.conf
+conf/application.conf
+
+```
 db = { driverClassName: com.mysql.jdbc.Driver, url: jdbc:mysql://localhost/test }
 ```
 
