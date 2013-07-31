@@ -2,6 +2,8 @@ package org.sisioh.config
 
 import com.typesafe.config._
 import java.io._
+import java.net.URL
+import java.util.Properties
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Try}
 
@@ -19,23 +21,23 @@ import scala.util.{Failure, Try}
  */
 object Configuration {
 
-  private[this] lazy val dontAllowMissingConfigOptions = ConfigParseOptions.defaults().setAllowMissing(false)
+  private[this] lazy val dontAllowMissingConfigOptions = ConfigurationParseOptions.defaults.setAllowMissing(false)
 
-  private[this] lazy val dontAllowMissingConfig = ConfigFactory.load(dontAllowMissingConfigOptions)
+  private[this] lazy val dontAllowMissingConfig = load(dontAllowMissingConfigOptions)
 
   /**
    * loads `Configuration` from config.resource or config.file. If not found default to 'conf/application.conf' in Dev mode
    * @return  configuration to be used
    */
-  private[config] def loadDev(appKey: File, devSettings: Map[String, String]): Config = {
+  private[config] def loadDev(appKey: File, devSettings: Map[String, String]): Configuration = {
     Try {
       lazy val file = {
         devSettings.get("config.file").orElse(Option(System.getProperty("config.file")))
           .map(f => new File(f)).getOrElse(new File(appKey, "conf/application.conf"))
       }
       val config = Option(System.getProperty("config.resource"))
-        .map(ConfigFactory.parseResources).getOrElse(ConfigFactory.parseFileAnySyntax(file))
-      ConfigFactory.parseMap(devSettings.asJava).withFallback(ConfigFactory.load(config))
+        .map(parseResources).getOrElse(parseFileAnySyntax(file))
+      parseMap(devSettings).withFallback(load(config))
     }.recoverWith {
       case e: ConfigException =>
         Failure(configError(ConfigurationOrigin(e.origin), e.getMessage, Some(e)))
@@ -59,9 +61,9 @@ object Configuration {
                  devSettings: Map[String, String] = Map.empty) = {
     Try {
       if (mode == ConfigurationMode.Prod)
-        apply(dontAllowMissingConfig)
+        dontAllowMissingConfig
       else
-        apply(loadDev(appKey, devSettings))
+        loadDev(appKey, devSettings)
     }.recoverWith {
       case e: ConfigException =>
         Failure(configError(ConfigurationOrigin(e.origin), e.getMessage, Some(e)))
@@ -76,16 +78,20 @@ object Configuration {
   def empty(originDescription: String): Configuration =
     apply(ConfigFactory.empty(originDescription))
 
-  /**
-   * Create a ConfigFactory object from the data passed as a Map.
-   */
-  def from(data: Map[String, Any]) = {
-    val jMap = data.map {
+  private def toJMap(values: Map[String, Any]): java.util.Map[String, _ <: AnyRef] =
+    values.map {
       case (k, v: Map[_, _]) => (k, v.asJava)
       case (k, v: Iterable[_]) => (k, v.asJava)
       case (k, v) => (k, v)
-    }.asJava
-    apply(ConfigFactory.parseMap(jMap))
+    }.asJava.asInstanceOf[java.util.Map[String, _ <: AnyRef]]
+
+
+  def parseMap(values: Map[String, Any]): Configuration = {
+    apply(ConfigFactory.parseMap(toJMap(values)))
+  }
+
+  def parseMap(values: Map[String, Any], originDescription: String) = {
+    apply(ConfigFactory.parseMap(toJMap(values), originDescription))
   }
 
   def configError(origin: ConfigurationOrigin, message: String, e: Option[Throwable] = None): Exception = {
@@ -105,11 +111,89 @@ object Configuration {
   def load(configuration: Configuration, resolveOptions: ConfigurationResolveOptions): Configuration =
     apply(ConfigFactory.load(configuration.core, resolveOptions.core))
 
+  def load(parseOptions: ConfigurationParseOptions): Configuration =
+    apply(ConfigFactory.load(parseOptions.core))
+
   def load(classLoader: ClassLoader): Configuration =
     apply(ConfigFactory.load(classLoader))
 
   def load(classLoader: ClassLoader, configuration: Configuration): Configuration =
     apply(ConfigFactory.load(classLoader, configuration.core))
+
+  def load(classLoader: ClassLoader, configuration: Configuration, resolveOptions: ConfigurationResolveOptions): Configuration =
+    apply(ConfigFactory.load(classLoader, configuration.core, resolveOptions.core))
+
+  def load(classLoader: ClassLoader, parseOptions: ConfigurationParseOptions): Configuration =
+    apply(ConfigFactory.load(classLoader, parseOptions.core))
+
+  def load(classLoader: ClassLoader, parseOptions: ConfigurationParseOptions, resolveOptions: ConfigurationResolveOptions): Configuration =
+    apply(ConfigFactory.load(classLoader, parseOptions.core, resolveOptions.core))
+
+  def load(classLoader: ClassLoader, resolveOptions: ConfigurationResolveOptions): Configuration =
+    apply(ConfigFactory.load(classLoader, resolveOptions.core))
+
+  def parseFile(file: File): Configuration =
+    apply(ConfigFactory.parseFile(file))
+
+  def parseFile(file: File, parseOptions: ConfigurationParseOptions): Configuration =
+    apply(ConfigFactory.parseFile(file, parseOptions.core))
+
+  def parseFileAnySyntax(fileBasename: File): Configuration =
+    apply(ConfigFactory.parseFileAnySyntax(fileBasename))
+
+  def parseFileAnySyntax(fileBasename: File, parseOptions: ConfigurationParseOptions): Configuration =
+    apply(ConfigFactory.parseFileAnySyntax(fileBasename, parseOptions.core))
+
+
+  def load(resourceBaseName: String): Configuration =
+    apply(ConfigFactory.load(resourceBaseName))
+
+  def load(resourceBaseName: String,
+           parseOptions: ConfigurationParseOptions,
+           resolveOptions: ConfigurationResolveOptions): Configuration =
+    apply(ConfigFactory.load(resourceBaseName, parseOptions.core, resolveOptions.core))
+
+  def parseProperties(properties: Properties): Configuration =
+    apply(ConfigFactory.parseProperties(properties))
+
+  def parseProperties(properties: Properties, parseOptions: ConfigurationParseOptions): Configuration =
+    apply(ConfigFactory.parseProperties(properties, parseOptions.core))
+
+  def parseReader(reader: Reader): Configuration =
+    apply(ConfigFactory.parseReader(reader))
+
+  def parseReader(reader: Reader, parseOptions: ConfigurationParseOptions): Configuration =
+    apply(ConfigFactory.parseReader(reader, parseOptions.core))
+
+  def parseResources(clazz: Class[_], resource: String): Configuration =
+    apply(ConfigFactory.parseResources(clazz, resource))
+
+  def parseResources(clazz: Class[_], resource: String, parseOptions: ConfigurationParseOptions): Configuration =
+    apply(ConfigFactory.parseResources(clazz, resource, parseOptions.core))
+
+  def parseResources(classLoader: ClassLoader, resource: String): Configuration =
+    apply(ConfigFactory.parseResources(classLoader, resource))
+
+  def parseResources(classLoader: ClassLoader, resource: String, parseOptions: ConfigurationParseOptions): Configuration =
+    apply(ConfigFactory.parseResources(classLoader, resource, parseOptions.core))
+
+  def parseResources(resource: String): Configuration =
+    apply(ConfigFactory.parseResources(resource))
+
+  def parseResources(resource: String, parseOptions: ConfigurationParseOptions): Configuration =
+    apply(ConfigFactory.parseResources(resource, parseOptions.core))
+
+  def parseString(s: String): Configuration =
+    apply(ConfigFactory.parseString(s))
+
+  def parseString(s: String, parseOptions: ConfigurationParseOptions): Configuration =
+    apply(ConfigFactory.parseString(s, parseOptions.core))
+
+  def parseURL(url: URL): Configuration =
+    apply(ConfigFactory.parseURL(url))
+
+  def parseURL(url: URL, parseOptions: ConfigurationParseOptions): Configuration =
+    apply(ConfigFactory.parseURL(url, parseOptions.core))
 
   def invalidateCaches(): Unit =
     ConfigFactory.invalidateCaches()
@@ -140,58 +224,421 @@ trait Configuration extends ConfigurationMergeable {
 
   def ++(other: Configuration): Configuration
 
+  /**
+   * Retrieves a sub-configuration, i.e. a configuration instance containing all keys starting with a given prefix.
+   *
+   * For example:
+   * {{{
+   * val configuration = Configuration.load()
+   * val engineConfig = configuration.getSub("engine")
+   * }}}
+   *
+   * The root key of this new configuration will be ‘engine’, and you can access any sub-keys relatively.
+   *
+   * @param key the root prefix for this sub-configuration
+   * @return a new configuration
+   */
   def getConfiguration(key: String): Option[Configuration]
 
+  /**
+   * Retrieves a List of sub-configurations, i.e. a configuration instance for each key that matches the key.
+   *
+   * For example:
+   * {{{
+   * val configuration = Configuration.load()
+   * val engineConfigs = configuration.getConfigList("engine")
+   * }}}
+   *
+   * The root key of this new configuration will be "engine", and you can access any sub-keys relatively.
+   */
   def getConfigurations(key: String): Option[Seq[Configuration]]
 
+  /**
+   * Retrieves a ConfigObject for this key, which implements Map<String,ConfigValue>
+   *
+   * For example:
+   * {{{
+   * val configuration = Configuration.load()
+   * val engineProperties = configuration.getObject("engine.properties")
+   * }}}
+   *
+   * The configuration must be provided as:
+   *
+   * {{{
+   * engine.properties = {id: 1, power: 5}
+   * }}}
+   */
   def getConfigurationObject(key: String): Option[ConfigurationObject]
 
+  /**
+   * Retrieves a configuration value as a List of `ConfigObject`.
+   *
+   * For example:
+   * {{{
+   * val configuration = Configuration.load()
+   * val engineProperties = configuration.getObjectList("engine.properties")
+   * }}}
+   *
+   * The configuration must be provided as:
+   *
+   * {{{
+   * engine.properties = [{id: 5, power: 3}, {id: 6, power: 20}]
+   * }}}
+   */
   def getConfigurationObjects(key: String): Option[Seq[ConfigurationObject]]
 
   def getConfigurationValue(key: String): Option[ConfigurationValue]
 
+  /**
+   * Gets a list value (with any element type) as a ConfigList, which implements java.util.List<ConfigValue>.
+   *
+   * For example:
+   * {{{
+   * val configuration = Configuration.load()
+   * val maxSizes = configuration.getList("engine.maxSizes")
+   * }}}
+   *
+   * The configuration must be provided as:
+   *
+   * {{{
+   * engine.maxSizes = ["foo", "bar"]
+   * }}}
+   */
   def getConfigurationValues(key: String): Option[Seq[ConfigurationValue]]
 
+  /**
+   * Retrieves a configuration value as a `String`.
+   *
+   * This method supports an optional set of valid values:
+   * {{{
+   * val config = Configuration.load()
+   * val mode = config.getString("engine.mode", Some(Set("dev","prod")))
+   * }}}
+   *
+   * A configuration error will be thrown if the configuration value does not match any of the required values.
+   *
+   * @param validValues valid values for this configuration
+   * @return a configuration value
+   */
   def getStringValue(key: String, validValues: Option[Set[String]] = None): Option[String]
 
+  /**
+   * Retrieves a configuration value as a List of `String`.
+   *
+   * For example:
+   * {{{
+   * val configuration = Configuration.load()
+   * val names = configuration.getStringList("names")
+   * }}}
+   *
+   * The configuration must be provided as:
+   *
+   * {{{
+   * names = ["Jim", "Bob", "Steve"]
+   * }}}
+   */
   def getStringValues(key: String): Option[Seq[String]]
 
+  /**
+   * Retrieves a configuration value as a `Number`.
+   *
+   * For example:
+   * {{{
+   * val configuration = Configuration.load()
+   * val counter = configuration.getNumber("foo.counter")
+   * }}}
+   *
+   * A configuration error will be thrown if the configuration value is not a valid `Number`.
+   *
+   * @param key the configuration key, relative to the configuration root key
+   * @return a configuration value
+   */
   def getNumberValue(key: String): Option[Number]
 
+  /**
+   * Retrieves a configuration value as a List of `Number`.
+   *
+   * For example:
+   * {{{
+   * val configuration = Configuration.load()
+   * val maxSizes = configuration.getNumberList("engine.maxSizes")
+   * }}}
+   *
+   * The configuration must be provided as:
+   *
+   * {{{
+   * engine.maxSizes = [50, 500, 5000]
+   * }}}
+   */
   def getNumberValues(key: String): Option[Seq[Number]]
 
+  /**
+   * Retrieves a configuration value as an `Int`.
+   *
+   * For example:
+   * {{{
+   * val configuration = Configuration.load()
+   * val poolSize = configuration.getInt("engine.pool.size")
+   * }}}
+   *
+   * A configuration error will be thrown if the configuration value is not a valid `Int`.
+   *
+   * @param key the configuration key, relative to the configuration root key
+   * @return a configuration value
+   */
   def getIntValue(key: String): Option[Int]
 
+  /**
+   * Retrieves a configuration value as a List of `Integer`.
+   *
+   * For example:
+   * {{{
+   * val configuration = Configuration.load()
+   * val maxSizes = configuration.getIntList("engine.maxSizes")
+   * }}}
+   *
+   * The configuration must be provided as:
+   *
+   * {{{
+   * engine.maxSizes = [100, 500, 2]
+   * }}}
+   */
   def getIntValues(key: String): Option[Seq[Int]]
 
+  /**
+   * Retrieves a configuration value as a `Long`.
+   *
+   * For example:
+   * {{{
+   * val configuration = Configuration.load()
+   * val duration = configuration.getLong("timeout.duration")
+   * }}}
+   *
+   * A configuration error will be thrown if the configuration value is not a valid `Long`.
+   *
+   * @param key the configuration key, relative to the configuration root key
+   * @return a configuration value
+   */
   def getLongValue(key: String): Option[Long]
 
+  /**
+   * Retrieves a configuration value as a List of `Long`.
+   *
+   * For example:
+   * {{{
+   * val configuration = Configuration.load()
+   * val maxSizes = configuration.getLongList("engine.maxSizes")
+   * }}}
+   *
+   * The configuration must be provided as:
+   *
+   * {{{
+   * engine.maxSizes = [10000000000000, 500, 2000]
+   * }}}
+   */
   def getLongValues(key: String): Option[Seq[Long]]
 
+  /**
+   * Retrieves a configuration value as a `Boolean`.
+   *
+   * For example:
+   * {{{
+   * val configuration = Configuration.load()
+   * val isEnabled = configuration.getString("engine.isEnabled")
+   * }}}
+   *
+   * A configuration error will be thrown if the configuration value is not a valid `Boolean`.
+   * Authorized vales are yes/no or true/false.
+   *
+   * @param key the configuration key, relative to the configuration root key
+   * @return a configuration value
+   */
   def getBooleanValue(key: String): Option[Boolean]
 
+  /**
+   * Retrieves a configuration value as a List of `Boolean`.
+   *
+   * For example:
+   * {{{
+   * val configuration = Configuration.load()
+   * val switches = configuration.getBooleanList("board.switches")
+   * }}}
+   *
+   * The configuration must be provided as:
+   *
+   * {{{
+   * board.switches = [true, true, false]
+   * }}}
+   *
+   * A configuration error will be thrown if the configuration value is not a valid `Boolean`.
+   * Authorized vales are yes/no or true/false.
+   */
   def getBooleanValues(key: String): Option[Seq[Boolean]]
 
+  /**
+   * Retrieves a configuration value as `Milliseconds`.
+   *
+   * For example:
+   * {{{
+   * val configuration = Configuration.load()
+   * val timeout = configuration.getMilliseconds("engine.timeout")
+   * }}}
+   *
+   * The configuration must be provided as:
+   *
+   * {{{
+   * engine.timeout = 1 second
+   * }}}
+   */
   def getMillisecondValue(key: String): Option[Long]
 
+  /**
+   * Retrieves a configuration value as List of `Milliseconds`.
+   *
+   * For example:
+   * {{{
+   * val configuration = Configuration.load()
+   * val timeouts = configuration.getMillisecondsList("engine.timeouts")
+   * }}}
+   *
+   * The configuration must be provided as:
+   *
+   * {{{
+   * engine.timeouts = [1 second, 1 second]
+   * }}}
+   */
   def getMillisecondValues(key: String): Option[Seq[Long]]
 
+  /**
+   * Retrieves a configuration value as `Nanoseconds`.
+   *
+   * For example:
+   * {{{
+   * val configuration = Configuration.load()
+   * val timeout = configuration.getNanoseconds("engine.timeout")
+   * }}}
+   *
+   * The configuration must be provided as:
+   *
+   * {{{
+   * engine.timeout = 1 second
+   * }}}
+   */
   def getNanosecondValue(key: String): Option[Long]
 
+  /**
+   * Retrieves a configuration value as List of `Nanoseconds`.
+   *
+   * For example:
+   * {{{
+   * val configuration = Configuration.load()
+   * val timeouts = configuration.getNanosecondsList("engine.timeouts")
+   * }}}
+   *
+   * The configuration must be provided as:
+   *
+   * {{{
+   * engine.timeouts = [1 second, 1 second]
+   * }}}
+   */
   def getNanosecondValues(key: String): Option[Seq[Long]]
 
+  /**
+   * Retrieves a configuration value as `Bytes`.
+   *
+   * For example:
+   * {{{
+   * val configuration = Configuration.load()
+   * val maxSize = configuration.getString("engine.maxSize")
+   * }}}
+   *
+   * The configuration must be provided as:
+   *
+   * {{{
+   * engine.maxSize = 512k
+   * }}}
+   */
   def getByteValue(key: String): Option[Long]
 
+  /**
+   * Retrieves a configuration value as a List of `Bytes`.
+   *
+   * For example:
+   * {{{
+   * val configuration = Configuration.load()
+   * val maxSizes = configuration.getBytesList("engine.maxSizes")
+   * }}}
+   *
+   * The configuration must be provided as:
+   *
+   * {{{
+   * engine.maxSizes = [512k, 256k, 256k]
+   * }}}
+   */
   def getByteValues(key: String): Option[Seq[Long]]
 
+  /**
+   * Retrieves a configuration value as a `Double`.
+   *
+   * For example:
+   * {{{
+   * val configuration = Configuration.load()
+   * val population = configuration.getDouble("world.population")
+   * }}}
+   *
+   * A configuration error will be thrown if the configuration value is not a valid `Double`.
+   *
+   * @param key the configuration key, relative to the configuration root key
+   * @return a configuration value
+   */
   def getDoubleValue(key: String): Option[Double]
 
+  /**
+   * Retrieves a configuration value as a List of `Double`.
+   *
+   * For example:
+   * {{{
+   * val configuration = Configuration.load()
+   * val maxSizes = configuration.getDoubleList("engine.maxSizes")
+   * }}}
+   *
+   * The configuration must be provided as:
+   *
+   * {{{
+   * engine.maxSizes = [5.0, 3.34, 2.6]
+   * }}}
+   */
   def getDoubleValues(key: String): Option[Seq[Double]]
 
+  /**
+   * Returns available keys.
+   *
+   * For example:
+   * {{{
+   * val configuration = Configuration.load()
+   * val keys = configuration.keys
+   * }}}
+   *
+   * @return the set of keys available in this configuration
+   */
   def keys: Set[String]
 
+  /**
+   * Returns sub-keys.
+   *
+   * For example:
+   * {{{
+   * val configuration = Configuration.load()
+   * val subKeys = configuration.subKeys
+   * }}}
+   * @return the set of direct sub-keys available in this configuration
+   */
   def subKeys: Set[String]
 
+  /**
+   * Returns every key as a set of key to value pairs, by recursively iterating through the
+   * config objects.
+   */
   def entrySet: Set[(String, ConfigValue)]
 
   def withOnlyPath(path: String): Configuration
@@ -200,6 +647,7 @@ trait Configuration extends ConfigurationMergeable {
 
   def withValue(path: String, value: ConfigurationValue): Configuration
 
+  def withFallback(other: ConfigurationMergeable): Configuration
 }
 
 private[config]
@@ -223,20 +671,6 @@ case class ConfigurationImpl(core: Config) extends Configuration {
     }.get
   }
 
-  /**
-   * Retrieves a configuration value as a `String`.
-   *
-   * This method supports an optional set of valid values:
-   * {{{
-   * val config = Configuration.load()
-   * val mode = config.getString("engine.mode", Some(Set("dev","prod")))
-   * }}}
-   *
-   * A configuration error will be thrown if the configuration value does not match any of the required values.
-   *
-   * @param validValues valid values for this configuration
-   * @return a configuration value
-   */
   def getStringValue(key: String, validValues: Option[Set[String]] = None): Option[String] =
     readValue(key, core.getString(key)).map {
       value =>
@@ -248,418 +682,70 @@ case class ConfigurationImpl(core: Config) extends Configuration {
         }
     }
 
-  /**
-   * Retrieves a configuration value as an `Int`.
-   *
-   * For example:
-   * {{{
-   * val configuration = Configuration.load()
-   * val poolSize = configuration.getInt("engine.pool.size")
-   * }}}
-   *
-   * A configuration error will be thrown if the configuration value is not a valid `Int`.
-   *
-   * @param key the configuration key, relative to the configuration root key
-   * @return a configuration value
-   */
   def getIntValue(key: String): Option[Int] = readValue(key, core.getInt(key))
 
-  /**
-   * Retrieves a configuration value as a `Boolean`.
-   *
-   * For example:
-   * {{{
-   * val configuration = Configuration.load()
-   * val isEnabled = configuration.getString("engine.isEnabled")
-   * }}}
-   *
-   * A configuration error will be thrown if the configuration value is not a valid `Boolean`.
-   * Authorized vales are yes/no or true/false.
-   *
-   * @param key the configuration key, relative to the configuration root key
-   * @return a configuration value
-   */
   def getBooleanValue(key: String): Option[Boolean] = readValue(key, core.getBoolean(key))
 
-  /**
-   * Retrieves a configuration value as `Milliseconds`.
-   *
-   * For example:
-   * {{{
-   * val configuration = Configuration.load()
-   * val timeout = configuration.getMilliseconds("engine.timeout")
-   * }}}
-   *
-   * The configuration must be provided as:
-   *
-   * {{{
-   * engine.timeout = 1 second
-   * }}}
-   */
   def getMillisecondValue(key: String): Option[Long] = readValue(key, core.getMilliseconds(key))
 
-  /**
-   * Retrieves a configuration value as `Nanoseconds`.
-   *
-   * For example:
-   * {{{
-   * val configuration = Configuration.load()
-   * val timeout = configuration.getNanoseconds("engine.timeout")
-   * }}}
-   *
-   * The configuration must be provided as:
-   *
-   * {{{
-   * engine.timeout = 1 second
-   * }}}
-   */
   def getNanosecondValue(key: String): Option[Long] = readValue(key, core.getNanoseconds(key))
 
-  /**
-   * Retrieves a configuration value as `Bytes`.
-   *
-   * For example:
-   * {{{
-   * val configuration = Configuration.load()
-   * val maxSize = configuration.getString("engine.maxSize")
-   * }}}
-   *
-   * The configuration must be provided as:
-   *
-   * {{{
-   * engine.maxSize = 512k
-   * }}}
-   */
   def getByteValue(key: String): Option[Long] = readValue(key, core.getBytes(key))
 
-  /**
-   * Retrieves a sub-configuration, i.e. a configuration instance containing all keys starting with a given prefix.
-   *
-   * For example:
-   * {{{
-   * val configuration = Configuration.load()
-   * val engineConfig = configuration.getSub("engine")
-   * }}}
-   *
-   * The root key of this new configuration will be ‘engine’, and you can access any sub-keys relatively.
-   *
-   * @param key the root prefix for this sub-configuration
-   * @return a new configuration
-   */
   def getConfiguration(key: String): Option[Configuration] = readValue(key, core.getConfig(key)).map(Configuration(_))
 
-  /**
-   * Retrieves a configuration value as a `Double`.
-   *
-   * For example:
-   * {{{
-   * val configuration = Configuration.load()
-   * val population = configuration.getDouble("world.population")
-   * }}}
-   *
-   * A configuration error will be thrown if the configuration value is not a valid `Double`.
-   *
-   * @param key the configuration key, relative to the configuration root key
-   * @return a configuration value
-   */
   def getDoubleValue(key: String): Option[Double] = readValue(key, core.getDouble(key))
 
-  /**
-   * Retrieves a configuration value as a `Long`.
-   *
-   * For example:
-   * {{{
-   * val configuration = Configuration.load()
-   * val duration = configuration.getLong("timeout.duration")
-   * }}}
-   *
-   * A configuration error will be thrown if the configuration value is not a valid `Long`.
-   *
-   * @param key the configuration key, relative to the configuration root key
-   * @return a configuration value
-   */
   def getLongValue(key: String): Option[Long] = readValue(key, core.getLong(key))
 
-  /**
-   * Retrieves a configuration value as a `Number`.
-   *
-   * For example:
-   * {{{
-   * val configuration = Configuration.load()
-   * val counter = configuration.getNumber("foo.counter")
-   * }}}
-   *
-   * A configuration error will be thrown if the configuration value is not a valid `Number`.
-   *
-   * @param key the configuration key, relative to the configuration root key
-   * @return a configuration value
-   */
   def getNumberValue(key: String): Option[Number] = readValue(key, core.getNumber(key))
 
-  /**
-   * Retrieves a configuration value as a List of `Boolean`.
-   *
-   * For example:
-   * {{{
-   * val configuration = Configuration.load()
-   * val switches = configuration.getBooleanList("board.switches")
-   * }}}
-   *
-   * The configuration must be provided as:
-   *
-   * {{{
-   * board.switches = [true, true, false]
-   * }}}
-   *
-   * A configuration error will be thrown if the configuration value is not a valid `Boolean`.
-   * Authorized vales are yes/no or true/false.
-   */
-  def getBooleanValues(key: String): Option[Seq[Boolean]] = readValue[Seq[Boolean]](key, core.getBooleanList(key).asScala.toSeq.map(e => if (e) true else false))
+  def getBooleanValues(key: String): Option[Seq[Boolean]] =
+    readValue[Seq[Boolean]](key, core.getBooleanList(key).asScala.toSeq.map(e => if (e) true else false))
 
-  /**
-   * Retrieves a configuration value as a List of `Bytes`.
-   *
-   * For example:
-   * {{{
-   * val configuration = Configuration.load()
-   * val maxSizes = configuration.getBytesList("engine.maxSizes")
-   * }}}
-   *
-   * The configuration must be provided as:
-   *
-   * {{{
-   * engine.maxSizes = [512k, 256k, 256k]
-   * }}}
-   */
   def getByteValues(key: String): Option[Seq[Long]] =
     readValue(key, core.getBytesList(key).asScala.toSeq.map(e => e.toLong))
 
-  /**
-   * Retrieves a List of sub-configurations, i.e. a configuration instance for each key that matches the key.
-   *
-   * For example:
-   * {{{
-   * val configuration = Configuration.load()
-   * val engineConfigs = configuration.getConfigList("engine")
-   * }}}
-   *
-   * The root key of this new configuration will be "engine", and you can access any sub-keys relatively.
-   */
   def getConfigurations(key: String): Option[Seq[Configuration]] =
     readValue(key, core.getConfigList(key)).map {
       configs => configs.asScala.map(Configuration(_))
     }
 
-  /**
-   * Retrieves a configuration value as a List of `Double`.
-   *
-   * For example:
-   * {{{
-   * val configuration = Configuration.load()
-   * val maxSizes = configuration.getDoubleList("engine.maxSizes")
-   * }}}
-   *
-   * The configuration must be provided as:
-   *
-   * {{{
-   * engine.maxSizes = [5.0, 3.34, 2.6]
-   * }}}
-   */
   def getDoubleValues(key: String): Option[Seq[Double]] =
     readValue(key, core.getDoubleList(key).asScala.toSeq.map(_.toDouble))
 
-  /**
-   * Retrieves a configuration value as a List of `Integer`.
-   *
-   * For example:
-   * {{{
-   * val configuration = Configuration.load()
-   * val maxSizes = configuration.getIntList("engine.maxSizes")
-   * }}}
-   *
-   * The configuration must be provided as:
-   *
-   * {{{
-   * engine.maxSizes = [100, 500, 2]
-   * }}}
-   */
   def getIntValues(key: String): Option[Seq[Int]] =
     readValue(key, core.getIntList(key).asScala.map(e => e.toInt).toSeq)
 
   def getConfigurationValue(key: String): Option[ConfigurationValue] =
     readValue(key, ConfigurationValue(core.getValue(key)))
 
-  /**
-   * Gets a list value (with any element type) as a ConfigList, which implements java.util.List<ConfigValue>.
-   *
-   * For example:
-   * {{{
-   * val configuration = Configuration.load()
-   * val maxSizes = configuration.getList("engine.maxSizes")
-   * }}}
-   *
-   * The configuration must be provided as:
-   *
-   * {{{
-   * engine.maxSizes = ["foo", "bar"]
-   * }}}
-   */
   def getConfigurationValues(key: String): Option[Seq[ConfigurationValue]] =
     readValue(key, core.getList(key).asScala.map(ConfigurationValue(_)).toSeq)
 
-  /**
-   * Retrieves a configuration value as a List of `Long`.
-   *
-   * For example:
-   * {{{
-   * val configuration = Configuration.load()
-   * val maxSizes = configuration.getLongList("engine.maxSizes")
-   * }}}
-   *
-   * The configuration must be provided as:
-   *
-   * {{{
-   * engine.maxSizes = [10000000000000, 500, 2000]
-   * }}}
-   */
   def getLongValues(key: String): Option[Seq[Long]] =
     readValue(key, core.getLongList(key).asScala.toSeq.map(e => e.toLong))
 
-  /**
-   * Retrieves a configuration value as List of `Milliseconds`.
-   *
-   * For example:
-   * {{{
-   * val configuration = Configuration.load()
-   * val timeouts = configuration.getMillisecondsList("engine.timeouts")
-   * }}}
-   *
-   * The configuration must be provided as:
-   *
-   * {{{
-   * engine.timeouts = [1 second, 1 second]
-   * }}}
-   */
   def getMillisecondValues(key: String): Option[Seq[Long]] =
     readValue(key, core.getMillisecondsList(key).asScala.toSeq.map(e => e.toLong))
 
-  /**
-   * Retrieves a configuration value as List of `Nanoseconds`.
-   *
-   * For example:
-   * {{{
-   * val configuration = Configuration.load()
-   * val timeouts = configuration.getNanosecondsList("engine.timeouts")
-   * }}}
-   *
-   * The configuration must be provided as:
-   *
-   * {{{
-   * engine.timeouts = [1 second, 1 second]
-   * }}}
-   */
   def getNanosecondValues(key: String): Option[Seq[Long]] =
     readValue(key, core.getNanosecondsList(key).asScala.toSeq.map(e => e.toLong))
 
-  /**
-   * Retrieves a configuration value as a List of `Number`.
-   *
-   * For example:
-   * {{{
-   * val configuration = Configuration.load()
-   * val maxSizes = configuration.getNumberList("engine.maxSizes")
-   * }}}
-   *
-   * The configuration must be provided as:
-   *
-   * {{{
-   * engine.maxSizes = [50, 500, 5000]
-   * }}}
-   */
   def getNumberValues(key: String): Option[Seq[Number]] =
     readValue(key, core.getNumberList(key).asScala.toSeq)
 
-  /**
-   * Retrieves a configuration value as a List of `ConfigObject`.
-   *
-   * For example:
-   * {{{
-   * val configuration = Configuration.load()
-   * val engineProperties = configuration.getObjectList("engine.properties")
-   * }}}
-   *
-   * The configuration must be provided as:
-   *
-   * {{{
-   * engine.properties = [{id: 5, power: 3}, {id: 6, power: 20}]
-   * }}}
-   */
   def getConfigurationObjects(key: String): Option[Seq[ConfigurationObject]] =
     readValue[Seq[ConfigurationObject]](key, core.getObjectList(key).asScala.map(ConfigurationObject(_)).toSeq)
 
-  /**
-   * Retrieves a configuration value as a List of `String`.
-   *
-   * For example:
-   * {{{
-   * val configuration = Configuration.load()
-   * val names = configuration.getStringList("names")
-   * }}}
-   *
-   * The configuration must be provided as:
-   *
-   * {{{
-   * names = ["Jim", "Bob", "Steve"]
-   * }}}
-   */
   def getStringValues(key: String): Option[Seq[String]] = readValue(key, core.getStringList(key).asScala.toSeq)
 
-  /**
-   * Retrieves a ConfigObject for this key, which implements Map<String,ConfigValue>
-   *
-   * For example:
-   * {{{
-   * val configuration = Configuration.load()
-   * val engineProperties = configuration.getObject("engine.properties")
-   * }}}
-   *
-   * The configuration must be provided as:
-   *
-   * {{{
-   * engine.properties = {id: 1, power: 5}
-   * }}}
-   */
   def getConfigurationObject(key: String): Option[ConfigurationObject] = readValue(key, ConfigurationObject(core.getObject(key)))
 
-  /**
-   * Returns available keys.
-   *
-   * For example:
-   * {{{
-   * val configuration = Configuration.load()
-   * val keys = configuration.keys
-   * }}}
-   *
-   * @return the set of keys available in this configuration
-   */
   def keys: Set[String] = core.entrySet.asScala.map(_.getKey).toSet
 
-  /**
-   * Returns sub-keys.
-   *
-   * For example:
-   * {{{
-   * val configuration = Configuration.load()
-   * val subKeys = configuration.subKeys
-   * }}}
-   * @return the set of direct sub-keys available in this configuration
-   */
   def subKeys: Set[String] = core.root().keySet().asScala.toSet
 
-  /**
-   * Returns every key as a set of key to value pairs, by recursively iterating through the
-   * config objects.
-   */
   def entrySet: Set[(String, ConfigValue)] = core.entrySet().asScala.map(e => e.getKey -> e.getValue).toSet
 
   /**
@@ -698,7 +784,7 @@ case class ConfigurationImpl(core: Config) extends Configuration {
     Configuration.configError(ConfigurationOrigin(core.root.origin), message, e)
   }
 
-  def withFallback(other: ConfigurationMergeable): ConfigurationMergeable =
+  def withFallback(other: ConfigurationMergeable): Configuration =
     Configuration(core.withFallback(other.core))
 
   def root: ConfigurationObject = ConfigurationObject(core.root())

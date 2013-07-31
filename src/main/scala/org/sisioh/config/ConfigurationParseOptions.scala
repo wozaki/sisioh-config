@@ -9,6 +9,8 @@ object ConfigurationParseOptions {
   def apply(configParseOptions: ConfigParseOptions): ConfigurationParseOptions =
     ConfigurationParseOptionsImpl(configParseOptions)
 
+  def defaults: ConfigurationParseOptions = apply(ConfigParseOptions.defaults())
+
 }
 
 trait ConfigurationParseOptions {

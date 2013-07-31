@@ -1,21 +1,52 @@
 package org.sisioh.config
 
 import com.typesafe.config.ConfigOrigin
-import scala.collection.JavaConverters._
 import java.net.URL
+import scala.collection.JavaConverters._
 
-case class ConfigurationOrigin(configOrigin: ConfigOrigin) {
 
-  def description() = Option(configOrigin.description())
+object ConfigurationOrigin {
 
-  def filename() = Option(configOrigin.filename())
+  def apply(configOrigin: ConfigOrigin): ConfigurationOrigin =
+    ConfigurationOriginImpl(configOrigin)
 
-  def url(): Option[URL] = Option(configOrigin.url())
+}
 
-  def resource(): Option[String] = Option(configOrigin.resource())
 
-  def lineNumber: Int = configOrigin.lineNumber()
+trait ConfigurationOrigin {
 
-  def comments: Seq[String] = configOrigin.comments.asScala.toSeq
+  protected[config] val core: ConfigOrigin
+
+  def description: Option[String]
+
+  def filename: Option[String]
+
+  def url: Option[URL]
+
+  def resource: Option[String]
+
+  def lineNumber: Int
+
+  def comments: Seq[String]
+
+}
+
+
+private[config]
+case class ConfigurationOriginImpl
+(protected[config] val core: ConfigOrigin)
+  extends ConfigurationOrigin {
+
+  def description = Option(core.description())
+
+  def filename = Option(core.filename())
+
+  def url: Option[URL] = Option(core.url())
+
+  def resource: Option[String] = Option(core.resource())
+
+  def lineNumber: Int = core.lineNumber()
+
+  def comments: Seq[String] = core.comments.asScala.toSeq
 
 }

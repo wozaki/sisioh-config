@@ -45,7 +45,7 @@ foo.bar3 = 1
 ```
 
 ```scala
-val config = Configuration.load(new File("conf"))
+val config = Configuration.parseFile(new File("conf/application.conf"))
 val Some(bar1) = config.getStringValue("foo.bar1") // value1
 val Some(bar2) = config.getStringValue("foo.bar2") // value2
 val Some(bar3) = config.getIntValue("foo.bar3") // 1
@@ -92,7 +92,7 @@ foo.bar3 = 1
 ```
 
 ```scala
-val config = Configuration.load(new File("conf"))
+val config = Configuration.parseFile(new File("conf/application.conf"))
 val Some(foo) = config.getConfiguration("foo")
 val Some(bar1) = foo.getStringValue("bar1") // value1
 val Some(bar2) = foo.getStringValue("bar2") // value2
@@ -108,7 +108,7 @@ db = { driverClassName: com.mysql.jdbc.Driver, url: jdbc:mysql://localhost/test 
 ```
 
 ```scala
-val config = Configuration.load(new File("conf"))
+val config = Configuration.parseFile(new File("conf/application.conf"))
 val Some(dbConfigObject) = config.getConfigurationObject("db")
 val Some(driverClassName) = dbConfigObject.get("driverClassName") // com.mysql.jdbc.Driver
 val Some(url) = dbConfigObject.get("url") // jdbc:mysql://localhost/test
@@ -142,3 +142,4 @@ val Some(url) = dbConfigObject.get("url") // jdbc:mysql://localhost/test
   <td>ConfigValueType</td>
 </tr>
 </table>
+

@@ -8,7 +8,7 @@ class ConfigurationSpec extends Specification {
 
   "configuration in Map" should {
 
-    val configInMap = Configuration.from(Map("foo.bar1" -> "value1", "foo.bar2" -> "value2", "blah" -> "value3"))
+    val configInMap = Configuration.parseMap(Map("foo.bar1" -> "value1", "foo.bar2" -> "value2", "blah" -> "value3"))
 
     "be accessible as an entry set" in {
       val map = Map(configInMap.entrySet.toList: _*)
@@ -24,12 +24,12 @@ class ConfigurationSpec extends Specification {
     }
 
     "get value as boolean" in {
-      val config = Configuration.from(Map("boolean.v1" -> false))
+      val config = Configuration.parseMap(Map("boolean.v1" -> false))
       config.getBooleanValue("boolean.v1") must beSome(false)
     }
 
     "get values as boolean" in {
-      val config = Configuration.from(Map("boolean.v2" -> Seq(false, true)))
+      val config = Configuration.parseMap(Map("boolean.v2" -> Seq(false, true)))
       config.getBooleanValues("boolean.v2") must beSome(Seq(false, true))
     }
 
@@ -37,7 +37,7 @@ class ConfigurationSpec extends Specification {
 
   "configuration in File" should {
 
-    val configInFile = Configuration.load(new File("src/test/resources"))
+    val configInFile = Configuration.parseFile(new File("src/test/resources/conf/application.conf"))
 
     "be accessible as an entry set" in {
       val map = Map(configInFile.entrySet.toList: _*)
