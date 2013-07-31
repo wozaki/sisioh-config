@@ -22,6 +22,19 @@ val Some(bar2) = config.getStringValue("foo.bar2") // value2
 val Some(bar3) = config.getIntValue("foo.bar3") // 1
 ```
 
+### read raw value as Seq
+
+conf/application.conf
+
+``` 
+foo = [value1, value2]
+```
+
+```scala
+val config = Configuration.load(new File("conf"))
+val Some(values) = config.getStringValues("foo") // Seq(value1, value2)
+```
+
 ### read ConfigurationValue
 
 conf/application.conf
