@@ -114,7 +114,7 @@ val Some(driverClassName) = dbConfigObject.get("driverClassName") // com.mysql.j
 val Some(url) = dbConfigObject.get("url") // jdbc:mysql://localhost/test
 ```
 
-## ralation between classes in sisioh-config and classes in typesafe config
+## relation between classes in sisioh-config and classes in typesafe config
 
 <table>
 <tr>
