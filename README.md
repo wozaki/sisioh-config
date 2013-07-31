@@ -60,7 +60,7 @@ foo = [value1, value2]
 ```
 
 ```scala
-val config = Configuration.load(new File("conf"))
+val config = Configuration.parseFile(new File("conf/application.conf"))
 val Some(values) = config.getStringValues("foo") // Seq(value1, value2)
 ```
 
@@ -75,7 +75,7 @@ foo.bar3 = 1
 ```
 
 ```scala
-val config = Configuration.load(new File("conf"))
+val config = Configuration.parseFile(new File("conf/application.conf"))
 val Some(bar1ConfigValue) = config.getConfigurationValue("foo.bar1")
 val Some(bar1) = bar1ConfigValue.valueAsString // value1
 // ...
