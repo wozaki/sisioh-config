@@ -8,9 +8,16 @@ Build Configuration
 
 for build.sbt
 ```scala
+resolvers ++= Seq(
+  // ...
+  // for snapshot
+  "Sonatype Snapshot Repository" at "https://oss.sonatype.org/content/repositories/snapshots/",
+  // ...
+)
+
 libraryDependencies ++= Seq(
   // ...
-  "org.sisioh" %% "sisioh-config" % "0.0.1",
+  "org.sisioh" %% "sisioh-config" % "0.0.2-SNAPSHOT",
   // ...
 )
 ```
@@ -21,10 +28,16 @@ object AppBuild extends Build {
   val root = Project(
     id = "app",
     base = file("."),
+    resolvers ++= Seq(
+      // ...
+      // for snapshot
+      "Sonatype Snapshot Repository" at "https://oss.sonatype.org/content/repositories/snapshots/",
+      // ...
+    ),
     settings = Project.defaultSettings ++ Seq(
       libraryDependencies ++= Seq(
         // ...
-        "org.sisioh" %% "sisioh-config" % "0.0.1",
+        "org.sisioh" %% "sisioh-config" % "0.0.2-SNAPSHOT",
         // ...
       )
     )
