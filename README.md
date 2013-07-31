@@ -113,33 +113,3 @@ val Some(dbConfigObject) = config.getConfigurationObject("db")
 val Some(driverClassName) = dbConfigObject.get("driverClassName") // com.mysql.jdbc.Driver
 val Some(url) = dbConfigObject.get("url") // jdbc:mysql://localhost/test
 ```
-
-## relation between classes in sisioh-config and classes in typesafe config
-
-<table>
-<tr>
-  <td>class name</td>
-  <td>class name in typesafe config</td>
-</tr>
-<tr>
-  <td>Configuration</td>
-  <td>Config</td>
-</tr>
-<tr>
-  <td>ConfigurationValue</td>
-  <td>ConfigValue</td>
-</tr>
-<tr>
-  <td>ConfigurationObject</td>
-  <td>ConfigObject</td>
-</tr>
-<tr>
-  <td>ConfigurationOrigin</td>
-  <td>ConfigOrigin</td>
-</tr>
-<tr>
-  <td>ConfigurationValueType</td>
-  <td>ConfigValueType</td>
-</tr>
-</table>
-
