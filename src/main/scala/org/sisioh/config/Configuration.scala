@@ -27,19 +27,19 @@ object Configuration {
    * loads `Configuration` from config.resource or config.file. If not found default to 'conf/application.conf' in Dev mode
    * @return  configuration to be used
    */
-  private[config] def loadDev(appkey: File, devSettings: Map[String, String]): Config = {
-    try {
+  private[config] def loadDev(appKey: File, devSettings: Map[String, String]): Config = {
+    Try {
       lazy val file = {
         devSettings.get("config.file").orElse(Option(System.getProperty("config.file")))
-          .map(f => new File(f)).getOrElse(new File(appkey, "conf/application.conf"))
+          .map(f => new File(f)).getOrElse(new File(appKey, "conf/application.conf"))
       }
       val config = Option(System.getProperty("config.resource"))
-        .map(ConfigFactory.parseResources(_)).getOrElse(ConfigFactory.parseFileAnySyntax(file))
-
+        .map(ConfigFactory.parseResources).getOrElse(ConfigFactory.parseFileAnySyntax(file))
       ConfigFactory.parseMap(devSettings.asJava).withFallback(ConfigFactory.load(config))
-    } catch {
-      case e: ConfigException => throw configError(ConfigurationOrigin(e.origin), e.getMessage, Some(e))
-    }
+    }.recoverWith {
+      case e: ConfigException =>
+        Failure(configError(ConfigurationOrigin(e.origin), e.getMessage, Some(e)))
+    }.get
   }
 
   /**
@@ -54,12 +54,14 @@ object Configuration {
    * @param mode Application mode.
    * @return a `Configuration` instance
    */
-  def load(appKey: File, mode: ConfigurationMode.Value = ConfigurationMode.Dev, devSettings: Map[String, String] = Map.empty) = {
+  def loadByMode(appKey: File,
+                 mode: ConfigurationMode.Value = ConfigurationMode.Dev,
+                 devSettings: Map[String, String] = Map.empty) = {
     Try {
       if (mode == ConfigurationMode.Prod)
-        Configuration(dontAllowMissingConfig)
+        apply(dontAllowMissingConfig)
       else
-        Configuration(loadDev(appKey, devSettings))
+        apply(loadDev(appKey, devSettings))
     }.recoverWith {
       case e: ConfigException =>
         Failure(configError(ConfigurationOrigin(e.origin), e.getMessage, Some(e)))
@@ -69,7 +71,10 @@ object Configuration {
   /**
    * Returns an empty Configuration object.
    */
-  def empty = Configuration(ConfigFactory.empty())
+  def empty = apply(ConfigFactory.empty())
+
+  def empty(originDescription: String): Configuration =
+    apply(ConfigFactory.empty(originDescription))
 
   /**
    * Create a ConfigFactory object from the data passed as a Map.
@@ -80,7 +85,7 @@ object Configuration {
       case (k, v: Iterable[_]) => (k, v.asJava)
       case (k, v) => (k, v)
     }.asJava
-    Configuration(ConfigFactory.parseMap(jMap))
+    apply(ConfigFactory.parseMap(jMap))
   }
 
   def configError(origin: ConfigurationOrigin, message: String, e: Option[Throwable] = None): Exception = {
@@ -91,11 +96,35 @@ object Configuration {
     new ConfigurationImpl(config)
 
 
+  def load: Configuration =
+    apply(ConfigFactory.load())
+
+  def load(configuration: Configuration): Configuration =
+    apply(ConfigFactory.load(configuration.core))
+
+  def load(configuration: Configuration, resolveOptions: ConfigurationResolveOptions): Configuration =
+    apply(ConfigFactory.load(configuration.core, resolveOptions.core))
+
+  def load(classLoader: ClassLoader): Configuration =
+    apply(ConfigFactory.load(classLoader))
+
+  def load(classLoader: ClassLoader, configuration: Configuration): Configuration =
+    apply(ConfigFactory.load(classLoader, configuration.core))
+
+  def invalidateCaches(): Unit =
+    ConfigFactory.invalidateCaches()
+
+  def systemProperties: Configuration =
+    apply(ConfigFactory.systemProperties())
+
+  def systemEnvironment: Configuration =
+    apply(ConfigFactory.systemEnvironment())
+
 }
 
 trait Configuration extends ConfigurationMergeable {
 
-  val core: Config
+  protected[config] val core: Config
 
   def root: ConfigurationObject
 

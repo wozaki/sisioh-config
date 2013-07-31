@@ -2,14 +2,14 @@ package org.sisioh.config
 
 import com.typesafe.config.ConfigResolveOptions
 
-object  ConfigurationResolveOptions {
+object ConfigurationResolveOptions {
 
   private[config] def apply(useSystemEnvironment: Boolean): ConfigurationResolveOptions =
     new ConfigurationResolveOptionsImpl(useSystemEnvironment)
 
-  def defaults: ConfigurationResolveOptions = apply(true)
+  def defaults: ConfigurationResolveOptions = apply(useSystemEnvironment = true)
 
-  def noSystem: ConfigurationResolveOptions = apply(false)
+  def noSystem: ConfigurationResolveOptions = apply(useSystemEnvironment = false)
 
 }
 
@@ -24,7 +24,8 @@ trait ConfigurationResolveOptions {
 }
 
 private[config]
-case class ConfigurationResolveOptionsImpl(private val useSystemEnvironment: Boolean)
+case class ConfigurationResolveOptionsImpl
+(private val useSystemEnvironment: Boolean)
   extends ConfigurationResolveOptions {
 
   val core = ConfigResolveOptions.defaults.setUseSystemEnvironment(useSystemEnvironment)
