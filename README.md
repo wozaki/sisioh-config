@@ -1,5 +1,4 @@
-sisioh-config
-=============
+# sisioh config
 
 sisioh-config is scala wrapper for typesafe [config](https://github.com/typesafehub/config).
 
