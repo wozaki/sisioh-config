@@ -60,6 +60,11 @@ class ConfigurationSpec extends Specification {
       configInFile.getBooleanValues("boolean.v2") must beSome(Seq(false, true))
     }
 
+    "get configuration" in {
+      val Some(config) = configInFile.getConfiguration("foo")
+      config.getStringValue("bar1") must beSome("value1")
+    }
+
     "get value as config object" in {
       val configObjectOpt = configInFile.getConfigurationObject("object.v1")
       configObjectOpt must beSome
