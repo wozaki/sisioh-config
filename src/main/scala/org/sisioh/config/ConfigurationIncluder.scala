@@ -11,7 +11,7 @@ object ConfigurationIncluder {
 
 trait ConfigurationIncluder {
 
-  protected[config] val core: ConfigIncluder
+  val underlying: ConfigIncluder
 
   def withFallback(fallback: ConfigurationIncluder): ConfigurationIncluder
 
@@ -21,13 +21,13 @@ trait ConfigurationIncluder {
 
 private[config]
 case class ConfigurationIncluderImpl
-(protected[config] val core: ConfigIncluder)
+(val underlying: ConfigIncluder)
   extends ConfigurationIncluder {
 
   def withFallback(fallback: ConfigurationIncluder): ConfigurationIncluder =
-    ConfigurationIncluder(core.withFallback(fallback.core))
+    ConfigurationIncluder(underlying.withFallback(fallback.underlying))
 
   def include(context: ConfigurationIncludeContext, what: String): ConfigurationObject =
-    ConfigurationObject(core.include(context.core, what))
+    ConfigurationObject(underlying.include(context.underlying, what))
 
 }

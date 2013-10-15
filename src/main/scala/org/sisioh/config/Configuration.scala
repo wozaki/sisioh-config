@@ -106,43 +106,43 @@ object Configuration {
     apply(ConfigFactory.load())
 
   def load(configuration: Configuration): Configuration =
-    apply(ConfigFactory.load(configuration.core))
+    apply(ConfigFactory.load(configuration.underlying))
 
   def load(configuration: Configuration, resolveOptions: ConfigurationResolveOptions): Configuration =
-    apply(ConfigFactory.load(configuration.core, resolveOptions.core))
+    apply(ConfigFactory.load(configuration.underlying, resolveOptions.underlying))
 
   def load(parseOptions: ConfigurationParseOptions): Configuration =
-    apply(ConfigFactory.load(parseOptions.core))
+    apply(ConfigFactory.load(parseOptions.underlying))
 
   def load(classLoader: ClassLoader): Configuration =
     apply(ConfigFactory.load(classLoader))
 
   def load(classLoader: ClassLoader, configuration: Configuration): Configuration =
-    apply(ConfigFactory.load(classLoader, configuration.core))
+    apply(ConfigFactory.load(classLoader, configuration.underlying))
 
   def load(classLoader: ClassLoader, configuration: Configuration, resolveOptions: ConfigurationResolveOptions): Configuration =
-    apply(ConfigFactory.load(classLoader, configuration.core, resolveOptions.core))
+    apply(ConfigFactory.load(classLoader, configuration.underlying, resolveOptions.underlying))
 
   def load(classLoader: ClassLoader, parseOptions: ConfigurationParseOptions): Configuration =
-    apply(ConfigFactory.load(classLoader, parseOptions.core))
+    apply(ConfigFactory.load(classLoader, parseOptions.underlying))
 
   def load(classLoader: ClassLoader, parseOptions: ConfigurationParseOptions, resolveOptions: ConfigurationResolveOptions): Configuration =
-    apply(ConfigFactory.load(classLoader, parseOptions.core, resolveOptions.core))
+    apply(ConfigFactory.load(classLoader, parseOptions.underlying, resolveOptions.underlying))
 
   def load(classLoader: ClassLoader, resolveOptions: ConfigurationResolveOptions): Configuration =
-    apply(ConfigFactory.load(classLoader, resolveOptions.core))
+    apply(ConfigFactory.load(classLoader, resolveOptions.underlying))
 
   def parseFile(file: File): Configuration =
     apply(ConfigFactory.parseFile(file))
 
   def parseFile(file: File, parseOptions: ConfigurationParseOptions): Configuration =
-    apply(ConfigFactory.parseFile(file, parseOptions.core))
+    apply(ConfigFactory.parseFile(file, parseOptions.underlying))
 
   def parseFileAnySyntax(fileBasename: File): Configuration =
     apply(ConfigFactory.parseFileAnySyntax(fileBasename))
 
   def parseFileAnySyntax(fileBasename: File, parseOptions: ConfigurationParseOptions): Configuration =
-    apply(ConfigFactory.parseFileAnySyntax(fileBasename, parseOptions.core))
+    apply(ConfigFactory.parseFileAnySyntax(fileBasename, parseOptions.underlying))
 
 
   def load(resourceBaseName: String): Configuration =
@@ -151,49 +151,49 @@ object Configuration {
   def load(resourceBaseName: String,
            parseOptions: ConfigurationParseOptions,
            resolveOptions: ConfigurationResolveOptions): Configuration =
-    apply(ConfigFactory.load(resourceBaseName, parseOptions.core, resolveOptions.core))
+    apply(ConfigFactory.load(resourceBaseName, parseOptions.underlying, resolveOptions.underlying))
 
   def parseProperties(properties: Properties): Configuration =
     apply(ConfigFactory.parseProperties(properties))
 
   def parseProperties(properties: Properties, parseOptions: ConfigurationParseOptions): Configuration =
-    apply(ConfigFactory.parseProperties(properties, parseOptions.core))
+    apply(ConfigFactory.parseProperties(properties, parseOptions.underlying))
 
   def parseReader(reader: Reader): Configuration =
     apply(ConfigFactory.parseReader(reader))
 
   def parseReader(reader: Reader, parseOptions: ConfigurationParseOptions): Configuration =
-    apply(ConfigFactory.parseReader(reader, parseOptions.core))
+    apply(ConfigFactory.parseReader(reader, parseOptions.underlying))
 
   def parseResources(clazz: Class[_], resource: String): Configuration =
     apply(ConfigFactory.parseResources(clazz, resource))
 
   def parseResources(clazz: Class[_], resource: String, parseOptions: ConfigurationParseOptions): Configuration =
-    apply(ConfigFactory.parseResources(clazz, resource, parseOptions.core))
+    apply(ConfigFactory.parseResources(clazz, resource, parseOptions.underlying))
 
   def parseResources(classLoader: ClassLoader, resource: String): Configuration =
     apply(ConfigFactory.parseResources(classLoader, resource))
 
   def parseResources(classLoader: ClassLoader, resource: String, parseOptions: ConfigurationParseOptions): Configuration =
-    apply(ConfigFactory.parseResources(classLoader, resource, parseOptions.core))
+    apply(ConfigFactory.parseResources(classLoader, resource, parseOptions.underlying))
 
   def parseResources(resource: String): Configuration =
     apply(ConfigFactory.parseResources(resource))
 
   def parseResources(resource: String, parseOptions: ConfigurationParseOptions): Configuration =
-    apply(ConfigFactory.parseResources(resource, parseOptions.core))
+    apply(ConfigFactory.parseResources(resource, parseOptions.underlying))
 
   def parseString(s: String): Configuration =
     apply(ConfigFactory.parseString(s))
 
   def parseString(s: String, parseOptions: ConfigurationParseOptions): Configuration =
-    apply(ConfigFactory.parseString(s, parseOptions.core))
+    apply(ConfigFactory.parseString(s, parseOptions.underlying))
 
   def parseURL(url: URL): Configuration =
     apply(ConfigFactory.parseURL(url))
 
   def parseURL(url: URL, parseOptions: ConfigurationParseOptions): Configuration =
-    apply(ConfigFactory.parseURL(url, parseOptions.core))
+    apply(ConfigFactory.parseURL(url, parseOptions.underlying))
 
   def invalidateCaches(): Unit =
     ConfigFactory.invalidateCaches()
@@ -208,7 +208,7 @@ object Configuration {
 
 trait Configuration extends ConfigurationMergeable {
 
-  protected[config] val core: Config
+  val underlying: Config
 
   def root: ConfigurationObject
 
@@ -651,13 +651,13 @@ trait Configuration extends ConfigurationMergeable {
 }
 
 private[config]
-case class ConfigurationImpl(core: Config) extends Configuration {
+case class ConfigurationImpl(underlying: Config) extends Configuration {
 
   def resolve(option: ConfigurationResolveOptions): Configuration =
-    Configuration(core.resolve(option.core))
+    Configuration(underlying.resolve(option.underlying))
 
   def ++(other: Configuration): Configuration = {
-    Configuration(other.core.withFallback(core))
+    Configuration(other.underlying.withFallback(underlying))
   }
 
   private def readValue[T](key: String, v: => T): Option[T] = {
@@ -672,7 +672,7 @@ case class ConfigurationImpl(core: Config) extends Configuration {
   }
 
   def getStringValue(key: String, validValues: Option[Set[String]] = None): Option[String] =
-    readValue(key, core.getString(key)).map {
+    readValue(key, underlying.getString(key)).map {
       value =>
         validValues match {
           case Some(values) if values.contains(value) => value
@@ -682,71 +682,71 @@ case class ConfigurationImpl(core: Config) extends Configuration {
         }
     }
 
-  def getIntValue(key: String): Option[Int] = readValue(key, core.getInt(key))
+  def getIntValue(key: String): Option[Int] = readValue(key, underlying.getInt(key))
 
-  def getBooleanValue(key: String): Option[Boolean] = readValue(key, core.getBoolean(key))
+  def getBooleanValue(key: String): Option[Boolean] = readValue(key, underlying.getBoolean(key))
 
-  def getMillisecondValue(key: String): Option[Long] = readValue(key, core.getMilliseconds(key))
+  def getMillisecondValue(key: String): Option[Long] = readValue(key, underlying.getMilliseconds(key))
 
-  def getNanosecondValue(key: String): Option[Long] = readValue(key, core.getNanoseconds(key))
+  def getNanosecondValue(key: String): Option[Long] = readValue(key, underlying.getNanoseconds(key))
 
-  def getByteValue(key: String): Option[Long] = readValue(key, core.getBytes(key))
+  def getByteValue(key: String): Option[Long] = readValue(key, underlying.getBytes(key))
 
-  def getConfiguration(key: String): Option[Configuration] = readValue(key, core.getConfig(key)).map(Configuration(_))
+  def getConfiguration(key: String): Option[Configuration] = readValue(key, underlying.getConfig(key)).map(Configuration(_))
 
-  def getDoubleValue(key: String): Option[Double] = readValue(key, core.getDouble(key))
+  def getDoubleValue(key: String): Option[Double] = readValue(key, underlying.getDouble(key))
 
-  def getLongValue(key: String): Option[Long] = readValue(key, core.getLong(key))
+  def getLongValue(key: String): Option[Long] = readValue(key, underlying.getLong(key))
 
-  def getNumberValue(key: String): Option[Number] = readValue(key, core.getNumber(key))
+  def getNumberValue(key: String): Option[Number] = readValue(key, underlying.getNumber(key))
 
   def getBooleanValues(key: String): Option[Seq[Boolean]] =
-    readValue[Seq[Boolean]](key, core.getBooleanList(key).asScala.toSeq.map(e => if (e) true else false))
+    readValue[Seq[Boolean]](key, underlying.getBooleanList(key).asScala.toSeq.map(e => if (e) true else false))
 
   def getByteValues(key: String): Option[Seq[Long]] =
-    readValue(key, core.getBytesList(key).asScala.toSeq.map(e => e.toLong))
+    readValue(key, underlying.getBytesList(key).asScala.toSeq.map(e => e.toLong))
 
   def getConfigurations(key: String): Option[Seq[Configuration]] =
-    readValue(key, core.getConfigList(key)).map {
+    readValue(key, underlying.getConfigList(key)).map {
       configs => configs.asScala.map(Configuration(_))
     }
 
   def getDoubleValues(key: String): Option[Seq[Double]] =
-    readValue(key, core.getDoubleList(key).asScala.toSeq.map(_.toDouble))
+    readValue(key, underlying.getDoubleList(key).asScala.toSeq.map(_.toDouble))
 
   def getIntValues(key: String): Option[Seq[Int]] =
-    readValue(key, core.getIntList(key).asScala.map(e => e.toInt).toSeq)
+    readValue(key, underlying.getIntList(key).asScala.map(e => e.toInt).toSeq)
 
   def getConfigurationValue(key: String): Option[ConfigurationValue] =
-    readValue(key, ConfigurationValue(core.getValue(key)))
+    readValue(key, ConfigurationValue(underlying.getValue(key)))
 
   def getConfigurationValues(key: String): Option[Seq[ConfigurationValue]] =
-    readValue(key, core.getList(key).asScala.map(ConfigurationValue(_)).toSeq)
+    readValue(key, underlying.getList(key).asScala.map(ConfigurationValue(_)).toSeq)
 
   def getLongValues(key: String): Option[Seq[Long]] =
-    readValue(key, core.getLongList(key).asScala.toSeq.map(e => e.toLong))
+    readValue(key, underlying.getLongList(key).asScala.toSeq.map(e => e.toLong))
 
   def getMillisecondValues(key: String): Option[Seq[Long]] =
-    readValue(key, core.getMillisecondsList(key).asScala.toSeq.map(e => e.toLong))
+    readValue(key, underlying.getMillisecondsList(key).asScala.toSeq.map(e => e.toLong))
 
   def getNanosecondValues(key: String): Option[Seq[Long]] =
-    readValue(key, core.getNanosecondsList(key).asScala.toSeq.map(e => e.toLong))
+    readValue(key, underlying.getNanosecondsList(key).asScala.toSeq.map(e => e.toLong))
 
   def getNumberValues(key: String): Option[Seq[Number]] =
-    readValue(key, core.getNumberList(key).asScala.toSeq)
+    readValue(key, underlying.getNumberList(key).asScala.toSeq)
 
   def getConfigurationObjects(key: String): Option[Seq[ConfigurationObject]] =
-    readValue[Seq[ConfigurationObject]](key, core.getObjectList(key).asScala.map(ConfigurationObject(_)).toSeq)
+    readValue[Seq[ConfigurationObject]](key, underlying.getObjectList(key).asScala.map(ConfigurationObject(_)).toSeq)
 
-  def getStringValues(key: String): Option[Seq[String]] = readValue(key, core.getStringList(key).asScala.toSeq)
+  def getStringValues(key: String): Option[Seq[String]] = readValue(key, underlying.getStringList(key).asScala.toSeq)
 
-  def getConfigurationObject(key: String): Option[ConfigurationObject] = readValue(key, ConfigurationObject(core.getObject(key)))
+  def getConfigurationObject(key: String): Option[ConfigurationObject] = readValue(key, ConfigurationObject(underlying.getObject(key)))
 
-  def keys: Set[String] = core.entrySet.asScala.map(_.getKey).toSet
+  def keys: Set[String] = underlying.entrySet.asScala.map(_.getKey).toSet
 
-  def subKeys: Set[String] = core.root().keySet().asScala.toSet
+  def subKeys: Set[String] = underlying.root().keySet().asScala.toSet
 
-  def entrySet: Set[(String, ConfigValue)] = core.entrySet().asScala.map(e => e.getKey -> e.getValue).toSet
+  def entrySet: Set[(String, ConfigValue)] = underlying.entrySet().asScala.map(e => e.getKey -> e.getValue).toSet
 
   /**
    * Creates a configuration error for a specific configuration key.
@@ -763,7 +763,7 @@ case class ConfigurationImpl(core: Config) extends Configuration {
    * @return a configuration exception
    */
   def reportError(key: String, message: String, e: Option[Throwable] = None): Exception = {
-    val origin = if (core.hasPath(key)) core.getValue(key).origin else core.root.origin
+    val origin = if (underlying.hasPath(key)) underlying.getValue(key).origin else underlying.root.origin
     Configuration.configError(ConfigurationOrigin(origin), message, e)
   }
 
@@ -781,28 +781,28 @@ case class ConfigurationImpl(core: Config) extends Configuration {
    * @return a configuration exception
    */
   def globalError(message: String, e: Option[Throwable] = None): Exception = {
-    Configuration.configError(ConfigurationOrigin(core.root.origin), message, e)
+    Configuration.configError(ConfigurationOrigin(underlying.root.origin), message, e)
   }
 
   def withFallback(other: ConfigurationMergeable): Configuration =
-    Configuration(core.withFallback(other.core))
+    Configuration(underlying.withFallback(other.underlying))
 
-  def root: ConfigurationObject = ConfigurationObject(core.root())
+  def root: ConfigurationObject = ConfigurationObject(underlying.root())
 
-  def hasPath(path: String): Boolean = core.hasPath(path)
+  def hasPath(path: String): Boolean = underlying.hasPath(path)
 
-  def isEmpty: Boolean = core.isEmpty
+  def isEmpty: Boolean = underlying.isEmpty
 
-  def withOnlyPath(path: String): Configuration = Configuration(core.withOnlyPath(path))
+  def withOnlyPath(path: String): Configuration = Configuration(underlying.withOnlyPath(path))
 
-  def withoutPath(path: String): Configuration = Configuration(core.withoutPath(path))
+  def withoutPath(path: String): Configuration = Configuration(underlying.withoutPath(path))
 
   def withValue(path: String, value: ConfigurationValue): Configuration =
-    Configuration(core.withValue(path, value.core))
+    Configuration(underlying.withValue(path, value.underlying))
 
-  def resolve: Configuration = Configuration(core.resolve)
+  def resolve: Configuration = Configuration(underlying.resolve)
 
   def checkValid(reference: Configuration, restrictToPaths: String*): Try[Unit] = Try {
-    core.checkValid(reference.core, restrictToPaths: _*)
+    underlying.checkValid(reference.underlying, restrictToPaths: _*)
   }
 }

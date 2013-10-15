@@ -11,7 +11,7 @@ object ConfigurationParseable {
 
 trait ConfigurationParseable {
 
-  protected[config] val core: ConfigParseable
+  val underlying: ConfigParseable
 
   def parse(options: ConfigurationParseOptions): ConfigurationObject
 
@@ -23,15 +23,15 @@ trait ConfigurationParseable {
 
 private[config]
 case class ConfigurationParseableImpl
-(protected[config] val core: ConfigParseable)
+(underlying: ConfigParseable)
   extends ConfigurationParseable {
 
   def parse(options: ConfigurationParseOptions): ConfigurationObject =
-    ConfigurationObject(core.parse(options.core))
+    ConfigurationObject(underlying.parse(options.underlying))
 
   def origin: ConfigurationOrigin =
-    ConfigurationOrigin(core.origin)
+    ConfigurationOrigin(underlying.origin)
 
-  def options: ConfigurationParseOptions = ConfigurationParseOptions(core.options)
+  def options: ConfigurationParseOptions = ConfigurationParseOptions(underlying.options)
 
 }

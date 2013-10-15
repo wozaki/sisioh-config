@@ -14,7 +14,7 @@ object ConfigurationValue {
 trait ConfigurationValue
   extends ConfigurationMergeable {
 
-  protected[config] val core: ConfigValue
+  val underlying: ConfigValue
 
   def origin: ConfigurationOrigin
 
@@ -41,15 +41,15 @@ trait ConfigurationValue
 }
 
 private[config]
-case class ConfigurationValueImpl(core: ConfigValue)
+case class ConfigurationValueImpl(underlying: ConfigValue)
   extends ConfigurationValue {
 
-  def origin = ConfigurationOrigin(core.origin())
+  def origin = ConfigurationOrigin(underlying.origin())
 
-  def valueType = ConfigurationValueType(core.valueType())
+  def valueType = ConfigurationValueType(underlying.valueType())
 
   def value: Option[Any] = {
-    core.unwrapped() match {
+    underlying.unwrapped() match {
       case null => None
       case v: java.util.Map[_, _] => Some(v.asScala)
       case v: java.util.List[_] => Some(v.asScala.toSeq)
@@ -103,10 +103,10 @@ case class ConfigurationValueImpl(core: ConfigValue)
   }
 
   def withFallback(other: ConfigurationMergeable) =
-    ConfigurationValue(core.withFallback(other.core))
+    ConfigurationValue(underlying.withFallback(other.underlying))
 
-  def atPath(path: String) = Configuration(core.atPath(path))
+  def atPath(path: String) = Configuration(underlying.atPath(path))
 
-  def atKey(key: String) = Configuration(core.atKey(key))
+  def atKey(key: String) = Configuration(underlying.atKey(key))
 
 }

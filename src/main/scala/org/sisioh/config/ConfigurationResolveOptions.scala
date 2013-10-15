@@ -15,7 +15,7 @@ object ConfigurationResolveOptions {
 
 trait ConfigurationResolveOptions {
 
-  protected[config] val core: ConfigResolveOptions
+  val underlying: ConfigResolveOptions
 
   def setUseSystemEnvironment(value: Boolean): ConfigurationResolveOptions
 
@@ -28,7 +28,7 @@ case class ConfigurationResolveOptionsImpl
 (private val useSystemEnvironment: Boolean)
   extends ConfigurationResolveOptions {
 
-  val core = ConfigResolveOptions.defaults.setUseSystemEnvironment(useSystemEnvironment)
+  val underlying = ConfigResolveOptions.defaults.setUseSystemEnvironment(useSystemEnvironment)
 
   def setUseSystemEnvironment(value: Boolean): ConfigurationResolveOptions =
     ConfigurationResolveOptions(value)

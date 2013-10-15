@@ -13,7 +13,7 @@ object ConfigurationObject {
 
 trait ConfigurationObject extends ConfigurationValue {
 
-  protected[config] val core: ConfigObject
+  val underlying: ConfigObject
 
   def toConfig: Configuration
 
@@ -34,30 +34,30 @@ trait ConfigurationObject extends ConfigurationValue {
 }
 
 private[config]
-case class ConfigurationObjectImpl(core: ConfigObject)
+case class ConfigurationObjectImpl(underlying: ConfigObject)
   extends ConfigurationObject {
 
-  def toConfig = Configuration(core.toConfig)
+  def toConfig = Configuration(underlying.toConfig)
 
-  def value: Option[Map[String, Any]] = Option(core.unwrapped()).map(_.asScala.toMap)
+  def value: Option[Map[String, Any]] = Option(underlying.unwrapped()).map(_.asScala.toMap)
 
   def withFallback(other: ConfigurationMergeable): ConfigurationObject =
-    ConfigurationObject(core.withFallback(other.core))
+    ConfigurationObject(underlying.withFallback(other.underlying))
 
-  def get(key: Any): Option[ConfigurationValue] = Option(core.get(key)).map(ConfigurationValue(_))
+  def get(key: Any): Option[ConfigurationValue] = Option(underlying.get(key)).map(ConfigurationValue(_))
 
   def apply(key: Any): ConfigurationValue = get(key).get
 
-  def withOnlyKey(key: String): ConfigurationObject = ConfigurationObject(core.withOnlyKey(key))
+  def withOnlyKey(key: String): ConfigurationObject = ConfigurationObject(underlying.withOnlyKey(key))
 
-  def withoutKey(key: String): ConfigurationObject = ConfigurationObject(core.withoutKey(key))
+  def withoutKey(key: String): ConfigurationObject = ConfigurationObject(underlying.withoutKey(key))
 
   def withValue(key: String, value: ConfigurationValue): ConfigurationObject =
-    ConfigurationObject(core.withValue(key, value.core))
+    ConfigurationObject(underlying.withValue(key, value.underlying))
 
-  def origin: ConfigurationOrigin = ConfigurationOrigin(core.origin())
+  def origin: ConfigurationOrigin = ConfigurationOrigin(underlying.origin())
 
-  def valueType  = ConfigurationValueType(core.valueType())
+  def valueType  = ConfigurationValueType(underlying.valueType())
 
   def valueAsString: Option[String] = None
 
@@ -69,8 +69,8 @@ case class ConfigurationObjectImpl(core: ConfigObject)
 
   def valueAsMap: Option[Map[String, Any]] = value
 
-  def atPath(path: String): Configuration = Configuration(core.atPath(path))
+  def atPath(path: String): Configuration = Configuration(underlying.atPath(path))
 
-  def atKey(key: String): Configuration = Configuration(core.atKey(key))
+  def atKey(key: String): Configuration = Configuration(underlying.atKey(key))
 
 }

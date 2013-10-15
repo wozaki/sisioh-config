@@ -15,7 +15,7 @@ object ConfigurationParseOptions {
 
 trait ConfigurationParseOptions {
 
-  protected[config] val core: ConfigParseOptions
+  val underlying: ConfigParseOptions
 
   def setSyntax(syntax: ConfigurationSyntax.Value): ConfigurationParseOptions
 
@@ -44,38 +44,38 @@ trait ConfigurationParseOptions {
 
 private[config]
 case class ConfigurationParseOptionsImpl
-(protected[config] val core: ConfigParseOptions = ConfigParseOptions.defaults())
+(underlying: ConfigParseOptions = ConfigParseOptions.defaults())
   extends ConfigurationParseOptions {
 
   def setSyntax(syntax: ConfigurationSyntax.Value): ConfigurationParseOptions =
-    ConfigurationParseOptions(core.setSyntax(ConfigurationSyntax.toCore(syntax)))
+    ConfigurationParseOptions(underlying.setSyntax(ConfigurationSyntax.toCore(syntax)))
 
-  def getSyntax: ConfigurationSyntax.Value = ConfigurationSyntax(core.getSyntax)
+  def getSyntax: ConfigurationSyntax.Value = ConfigurationSyntax(underlying.getSyntax)
 
   def setOriginDescription(originDescription: String): ConfigurationParseOptions =
-    ConfigurationParseOptions(core.setOriginDescription(originDescription))
+    ConfigurationParseOptions(underlying.setOriginDescription(originDescription))
 
-  def getOriginDescription: String = core.getOriginDescription
+  def getOriginDescription: String = underlying.getOriginDescription
 
   def setAllowMissing(allowMissing: Boolean): ConfigurationParseOptions =
-    ConfigurationParseOptions(core.setAllowMissing(allowMissing))
+    ConfigurationParseOptions(underlying.setAllowMissing(allowMissing))
 
-  def getAllowMissing: Boolean = core.getAllowMissing
+  def getAllowMissing: Boolean = underlying.getAllowMissing
 
   def setIncluder(includer: ConfigurationIncluder): ConfigurationParseOptions =
-    ConfigurationParseOptions(core.setIncluder(includer.core))
+    ConfigurationParseOptions(underlying.setIncluder(includer.underlying))
 
   def prependIncluder(includer: ConfigurationIncluder): ConfigurationParseOptions =
-    ConfigurationParseOptions(core.prependIncluder(includer.core))
+    ConfigurationParseOptions(underlying.prependIncluder(includer.underlying))
 
   def appendIncluder(includer: ConfigurationIncluder): ConfigurationParseOptions =
-    ConfigurationParseOptions(core.appendIncluder(includer.core))
+    ConfigurationParseOptions(underlying.appendIncluder(includer.underlying))
 
-  def getIncluder: ConfigurationIncluder = ConfigurationIncluder(core.getIncluder)
+  def getIncluder: ConfigurationIncluder = ConfigurationIncluder(underlying.getIncluder)
 
   def setClassLoader(loader: ClassLoader): ConfigurationParseOptions =
-    ConfigurationParseOptions(core.setClassLoader(loader))
+    ConfigurationParseOptions(underlying.setClassLoader(loader))
 
-  def getClassLoader: ClassLoader = core.getClassLoader
+  def getClassLoader: ClassLoader = underlying.getClassLoader
 
 }

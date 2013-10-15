@@ -15,7 +15,7 @@ object ConfigurationOrigin {
 
 trait ConfigurationOrigin {
 
-  protected[config] val core: ConfigOrigin
+  val underlying: ConfigOrigin
 
   def description: Option[String]
 
@@ -34,19 +34,19 @@ trait ConfigurationOrigin {
 
 private[config]
 case class ConfigurationOriginImpl
-(protected[config] val core: ConfigOrigin)
+(underlying: ConfigOrigin)
   extends ConfigurationOrigin {
 
-  def description = Option(core.description())
+  def description = Option(underlying.description())
 
-  def filename = Option(core.filename())
+  def filename = Option(underlying.filename())
 
-  def url: Option[URL] = Option(core.url())
+  def url: Option[URL] = Option(underlying.url())
 
-  def resource: Option[String] = Option(core.resource())
+  def resource: Option[String] = Option(underlying.resource())
 
-  def lineNumber: Int = core.lineNumber()
+  def lineNumber: Int = underlying.lineNumber()
 
-  def comments: Seq[String] = core.comments.asScala.toSeq
+  def comments: Seq[String] = underlying.comments.asScala.toSeq
 
 }

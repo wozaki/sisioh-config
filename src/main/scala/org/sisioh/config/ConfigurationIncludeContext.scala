@@ -12,7 +12,7 @@ object ConfigurationIncludeContext {
 
 trait ConfigurationIncludeContext {
 
-  protected[config] val core: ConfigIncludeContext
+  val underlying: ConfigIncludeContext
 
   def relativeTo(filename: String): ConfigurationParseable
 
@@ -22,13 +22,13 @@ trait ConfigurationIncludeContext {
 
 private[config]
 case class ConfigurationIncludeContextImpl
-(protected[config] val core: ConfigIncludeContext)
+(val underlying: ConfigIncludeContext)
   extends ConfigurationIncludeContext {
 
   def relativeTo(filename: String): ConfigurationParseable =
-    ConfigurationParseable(core.relativeTo(filename))
+    ConfigurationParseable(underlying.relativeTo(filename))
 
   def parseOptions: ConfigurationParseOptions =
-    ConfigurationParseOptions(core.parseOptions())
+    ConfigurationParseOptions(underlying.parseOptions())
 
 }

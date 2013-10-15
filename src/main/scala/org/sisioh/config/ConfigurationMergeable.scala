@@ -4,7 +4,7 @@ import com.typesafe.config.ConfigMergeable
 
 trait ConfigurationMergeable {
 
-  protected[config] val core: ConfigMergeable
+  val underlying: ConfigMergeable
 
   def withFallback(other: ConfigurationMergeable): ConfigurationMergeable
 
